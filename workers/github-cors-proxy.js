@@ -39,6 +39,8 @@ export default {
     // 强制带 Accept 头（GitHub v3）
     if (!headers.has('Accept')) headers.set('Accept', 'application/vnd.github+json');
     if (!headers.has('X-GitHub-Api-Version')) headers.set('X-GitHub-Api-Version', '2022-11-28');
+    // GitHub REST API 强制要求 User-Agent header（缺则 403 forbidden）
+    headers.set('User-Agent', request.headers.get('User-Agent') || 'hgm-gallery-admin/1.0');
 
     const init = {
       method: request.method,
