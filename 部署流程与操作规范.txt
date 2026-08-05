@@ -1,0 +1,771 @@
+================================================================================
+黄桂明·桂林山水 — 个人作品集网站
+部署流程与操作规范
+最后更新：2026-08-04
+================================================================================
+
+
+【目录】
+  一、首次部署
+  二、GitHub 同步配置
+  三、日常管理操作（admin）
+  四、运维与排错
+  五、安全与备份
+  六、版本更新
+
+
+================================================================================
+一、首次部署
+================================================================================
+
+1.1 准备账号
+-----------
+- GitHub 账号（项目仓库已建好）
+- Vercel / Netlify / CloudFlare Pages 账号（任选）
+- Cloudflare 账号（用于部署 CORS Worker）
+
+
+1.2 部署主项目（5 分钟）
+-----------------------
+
+A. Vercel（推荐，国内可访问性最好）
+   1. https://vercel.com → Sign Up → 用 GitHub 账号登录
+   2. Add New Project → 选项目仓库 → Import
+   3. Framework Preset: Other
+   4. Build Command: 留空
+   5. Output Directory: 留空（项目根目录即静态文件）
+   6. 点击 Deploy，等待 1-2 分钟
+   7. 部署完成会得到 https://xxx.vercel.app
+
+B. Netlify
+   1. https://app.netlify.com → Sign Up
+   2. Add new site → Import an existing project
+   3. 选 GitHub 仓库
+   4. Build command: 留空
+   5. Publish directory: 留空（项目根）
+   6. Deploy site
+
+C. CloudFlare Pages
+   1. https://dash.cloudflare.com → Pages → Create a project
+   2. Connect to Git → 选仓库
+   3. Build command: 留空
+   4. Build output directory: 留空
+   5. Save and Deploy
+
+
+1.3 部署 Cloudflare Worker（CORS 代理，必须）
+-------------------------------------------
+1. 登录 https://dash.cloudflare.com
+2. 左侧菜单 Workers & Pages → Create application
+3. 选 Create Worker
+4. 命名：hgm-github-proxy（可自定义）
+5. 点击 Deploy
+6. 部署后点 Edit code
+7. 把 workers/github-cors-proxy.js 全部内容粘贴到编辑器
+8. 点击 Save and Deploy
+9. 复制 worker URL：
+   格式：https://hgm-github-proxy.YOUR-SUBDOMAIN.workers.dev
+
+
+1.4 验证部署
+-----------
+访问以下 URL 确认无 404 / 500：
+- https://你的域名/index.html
+- https://你的域名/gallery.html
+- https://你的域名/artist.html
+- https://你的域名/data/artworks.json
+- https://你的域名/admin.html
+
+如 404 data/artworks.json：检查 data/ 目录是否在仓库根目录
+如 admin.html 404：检查文件是否被 git 追踪
+
+
+================================================================================
+二、GitHub 同步配置
+================================================================================
+
+2.1 创建 Personal Access Token（PAT）
+------------------------------------
+
+1. 打开 https://github.com/settings/tokens?type=beta
+2. Generate new token → Fine-grained token
+3. Token name: hgm-gallery-admin（自定义）
+4. Expiration: 90 days
+5. Repository access: Only select repositories
+6. 选你的项目仓库
+7. Repository permissions:
+   - Contents: Read and write  ← 必选
+   - Metadata: Read-only       ← 默认就有
+   其他权限全部留空
+8. Generate token
+9. 立即复制 token（页面关闭后无法再看到）
+10. 保存到密码管理器（推荐 1Password / Bitwarden）
+
+
+2.2 首次配置 admin
+-----------------
+
+1. 浏览器访问：
+   https://你的域名/admin.html?key=pzz040105AS
+   （默认口令 pzz040105AS，部署后必须改，见六、版本更新）
+
+2. 进入后找到 "GitHub 同步配置" 面板
+
+3. 依次填入：
+   - 仓库：你的用户名/仓库名（如 zhangsan/huang-guiming-gallery）
+   - 分支：main（默认）
+   - Personal Access Token：粘贴第 2.1 步的 PAT
+   - CORS 代理 URL：粘贴第 1.3 步的 worker URL
+
+4. 点击 "测试连接"
+   成功显示：✓ 连接成功：xxx/xxx（公开/私有，默认分支 main）
+   失败显示：✗ 错误信息
+
+5. 失败排错：
+   - 401 Bad credentials → Token 错误，重新生成
+   - 404 Not Found → 仓库名写错（注意大小写）
+   - CORS error → Worker URL 错误或 Worker 没部署成功
+   - Token 权限不足 → 检查 Contents 是否为 Read and write
+
+6. 测试成功后点击 "保存配置"
+   提示 "已保存到本浏览器 localStorage"
+   状态栏显示 "✓ 已配置"
+
+
+2.3 重要：每台设备/浏览器都要单独配置
+----------------------------------------
+- admin 配置存于浏览器 localStorage，不跨设备同步
+- 公司电脑配置一次，回家电脑也要配置一次
+- 配置隔离是设计如此：避免 token 泄露
+
+
+2.4 修改默认口令（强烈建议）
+----------------------------
+编辑 lib/admin-config.js：
+  找到：window.HGM_ADMIN_KEY_HASH = '7124acf3a42b479cf04bb4b70d8752d60bc235470266e5aad6b8bbd7dd3ea9d4';
+  替换为新口令的 sha256 hash
+
+生成新 hash 的方法（浏览器开发者工具 Console 执行）：
+  crypto.subtle.digest('SHA-256', new TextEncoder().encode('你的新口令'))
+    .then(b => console.log([...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('')))
+
+替换后 commit 推送，Vercel 自动重新部署生效。
+同时修改 README.md 中"默认口令"说明（如果之前记录过）。
+
+
+================================================================================
+三、日常管理操作（admin）
+================================================================================
+
+3.1 进入 admin
+-------------
+URL 格式：https://你的域名/admin.html?key=你的口令
+
+三种使用方式：
+A. URL 直接带 key（适合收藏书签）
+B. 进入 admin.html 后输入口令（适合临时使用）
+C. 不要把带 key 的 URL 发给别人（口令以 hash 形式比对，但 URL 泄露意味着对方能进入）
+
+
+3.2 添加作品
+-----------
+1. 点击右上 "＋ 添加作品"
+2. 填写表单（必填：标题、图片 URL）
+3. 点击 "保存"
+4. 状态栏依次显示：
+   - "已添加：作品标题"
+   - "已同步到 GitHub：abc1234"（commit SHA 前 7 位）
+5. 30 秒-1 分钟后访客刷新可见
+
+
+3.3 编辑作品
+-----------
+1. 在列表中找到作品，点击 "编辑"
+2. 修改字段
+3. 点击 "保存"
+4. 同上两步提示
+
+
+3.4 删除作品
+-----------
+1. 在列表中找到作品，点击 "删除"
+2. 弹出确认弹窗
+3. 再次点击 "永久删除"（红字）
+4. 同上两步提示
+
+
+3.5 导出 JSON（兜底）
+--------------------
+用途：
+- GitHub 同步失败时的备份
+- 跨设备/跨浏览器迁移（不通过 GitHub）
+- 离线归档
+
+操作：
+1. 点击右上 "导出 JSON"
+2. 浏览器下载 hgm-artworks-2026-08-04.json
+3. 文件包含所有作品 + 诗作 + 品牌信息
+
+导入：
+1. 点击右上 "导入 JSON"
+2. 选择之前导出的 json 文件
+3. 覆盖当前 localStorage + GitHub 数据
+
+
+3.6 恢复默认
+-----------
+警告：会清空所有作品，仅恢复源码默认 19 张。
+
+操作：
+1. 点击右上 "恢复默认"
+2. 弹窗确认
+3. 再次确认 → 清空 localStorage + 恢复默认
+
+
+3.7 字段填写规范
+---------------
+
+【v5.20 简化表单】本版本表单已大幅精简为 6 个核心字段 + 折叠的高级字段。
+
+主区域（必填 + 常用）：
+- 作品图片 *（必填） — 三种方式选其一：
+  · 点"选择文件"上传本地图（自动预览）
+  · 拖拽文件到上传区（自动预览）
+  · 粘贴图片 URL 到文本框（自动预览）
+  ★ 已配 GitHub 时，保存时自动 PUT 到 素材/{id}.jpg
+  ★ 单文件限制 10MB，超过请先压缩
+  ★ 支持格式：JPG / PNG / WebP / GIF
+- 标题 *（必填，简短准确，如"清江一曲绕山流"）
+- 分类（逗号分隔多分类，默认"桂林山水"）
+- 题画诗（可选）
+- 年份（可选，如"2024"）
+- 描述（多行文本，创作背景、风格说明等）
+
+高级字段（折叠，默认收起，点"高级字段（可选）"展开）：
+- 价格（¥，整数）
+- 地点（城市名）
+- 尺寸（"100 × 50"，留空也能展示）
+- 形式（下拉：横幅/竖幅/方形/镜片/卷轴/留空自动）
+- 材质（下拉：宣纸·水墨/宣纸·设色/绢本·设色/宣纸·泼墨，默认宣纸·水墨）
+- 在售（下拉：在售/非卖，默认在售）
+
+【自动字段】以下由系统自动处理，无需填写：
+- id — 自增
+- seal — 根据 id 自动生成（壹/贰/.../拾/拾壹/...）
+- thumb — 默认同 image
+- featured — 默认 true（首页精选）
+- inStock — 默认 true（在售）
+- style — 空数组
+- poemId — null
+- createdAt — 暂未启用
+
+
+3.8 图片上传详解
+----------------
+
+三种方式选一：
+
+方式 1：选择文件
+  1. 点"📁 选择文件"按钮
+  2. 在文件选择器中选图片
+  3. 自动预览
+  4. 若已配 GitHub：自动 PUT 到 素材/{id}.jpg → 表单 value 替换为相对路径
+  5. 若未配 GitHub：暂存为 data URL 写入 localStorage（注意 5MB 容量限制）
+
+方式 2：拖拽文件
+  1. 把图片文件直接拖到上传区
+  2. 拖入时上传区边框变红（dragover 状态）
+  3. 松手后自动预览
+  4. 后续同方式 1
+
+方式 3：粘贴 URL
+  1. 在 URL 输入框粘贴图片 URL
+  2. 支持本地相对路径（"素材/1.jpg"）或远程 URL（"https://..."）
+  3. 实时预览
+  4. ★ 推荐用此方式放已存在的图片，无需上传
+
+【图片预览区】点击预览区的空白处可触发文件选择（再次上传）。
+
+【清除】点"清除"按钮清空当前选择，重新选。
+
+【GitHub 自动上传】当且仅当：
+- 已配置 GitHub 仓库 + Token + CORS 代理
+- 作品已有 id（编辑现有作品时）
+- 用户选的是本地文件（非 URL）
+
+上传路径：素材/{artworkId}.{扩展名}
+扩展名从文件名提取，默认 jpg。
+状态栏会显示进度：读取中 → 上传到 GitHub… → ✓ 已上传到 素材/2.jpg
+
+
+3.9 字段填写规范（v5.20 之前的字段映射）
+----------------------------------
+历史数据中可能有以下字段，新版表单不再要求填写但保留兼容：
+- 印章（seal）— 自动生成
+- 缩略图（thumb）— 默认同 image
+- 诗作 ID（poemId）— 不再使用，关联通过题画诗文字匹配
+- 风格（style）— 不再使用
+
+如需保留历史作品的特殊字段，可在编辑时通过"高级字段"外的"导出 JSON"手动添加。
+
+
+3.10 访客看到数据的延迟
+------------------------
+- 访客作品页每 30 秒轮询一次 data/artworks.json
+- admin 保存到 GitHub → 30 秒内轮询命中
+- 总延迟 = Vercel 重建（10-30s）+ CDN 刷新（5-30s）+ 轮询间隔（0-30s）
+- 实际 30 秒-1 分钟内可见
+- 访客手动 Ctrl+R 刷新也能立即看到
+
+
+================================================================================
+六、版本更新
+================================================================================
+
+6.0 v5.20 简化表单
+----------------
+
+【新增】
+- admin 表单从 17 字段精简为 6 主字段 + 6 高级字段
+- 新增图片上传区：支持选择文件 / 拖拽 / 粘贴 URL
+- GitHub 同步时自动上传图片到 素材/{id}.jpg
+- 自动生成 seal（id → 壹/贰/.../拾/拾壹/...）
+- 默认值：分类"桂林山水"、材质"宣纸·水墨"、在售"在售"、featured true
+
+【自动布局】
+- gallery.html 使用 grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))
+  视口宽度自动决定列数，无需手写媒体查询
+- 现有 image-fit.js 自动按图片真实宽高比设置容器
+  横图自动横展示，竖图自动竖展示，无需手动选
+- 移动/桌面同一套 CSS 适配
+
+【历史数据兼容】
+- 旧作品的 17 字段数据完整保留
+- 编辑旧作品时只显示新表单字段
+- 缺失字段（如 style、poemId、seal）显示为空
+- 旧作品的 seal 显示"壹"等自动值，不影响显示
+
+【注意事项】
+- 单张图片不要超过 10MB（前端限制）
+- 大量作品使用同一图时建议用 URL 方式（不重复上传）
+- localStorage 容量约 5MB，纯文本 + base64 小图可达 5-10 张
+- 大量作品建议始终启用 GitHub 同步
+
+【回滚方法】
+如新表单有问题：
+git revert HEAD~1  # 回滚到 v5.20 之前的版本
+或 git checkout <上一个 commit> -- admin.html lib/admin.js styles.css
+
+【新功能未来扩展方向】
+- 拖拽批量上传（一次上传多张图，自动创建多条记录）
+- 拍摄信息自动提取（EXIF 读取拍摄时间作为 year）
+- AI 自动生成 description / title
+- 作品历史版本对比
+
+
+================================================================================
+【附录】关键技术细节
+================================================================================
+
+A. 数据流向（详细）
+----------------
+管理员浏览器：
+  admin.html 增/删/改
+    → lib/admin.js → localStorage（瞬时）
+    → 如果是新增图片 → lib/github-api.js PUT 素材/{id}.jpg 到 GitHub
+    → lib/github-api.js PUT data/artworks.json 到 GitHub
+    → 成功：状态栏 "已同步到 GitHub"
+    → 失败：状态栏 "已存本地，GitHub 推送失败"（不影响 UI）
+
+GitHub：
+  仓库 素材/{id}.jpg 被 commit（图片）
+  仓库 data/artworks.json 被 commit（数据）
+    ↓
+  静态托管平台（Vercel）监听 push
+    ↓
+  触发自动构建
+    ↓
+  部署新版本到 CDN
+
+访客浏览器：
+  打开 /gallery.html
+    → lib/artworks-data.js
+    → 启动：fetch data/artworks.json → 写入 localStorage
+    → 每 30 秒：setInterval 重新 fetch
+    → 若 exportedAt 变化：更新 localStorage + 派发 'hgm-artworks-updated'
+    → lib/gallery-render.js 监听事件 → 重新渲染列表
+    → 图片 src 直接是 素材/{id}.jpg 相对路径，浏览器自动请求 CDN
+
+
+B. 文件清单（与本流程相关）
+---------------------------
+新增：
+  data/artworks.json               — 作品数据源
+  lib/github-api.js                — GitHub Contents API 封装
+  workers/github-cors-proxy.js      — Cloudflare Worker CORS 代理
+
+修改（v5.20 简化表单）：
+  admin.html                       — 极简表单 + 图片上传区
+  lib/admin.js                     — saveFromForm 简化为 6 字段 + 自动派生
+  styles.css                       — gallery-grid 改用 auto-fill
+  README.md                        — 部署文档
+  部署流程与操作规范.txt            — 本文件
+
+新增的 v5.20 自动布局：
+  .gallery-grid                    — repeat(auto-fill, minmax(280px, 1fr))
+  .image-upload                    — admin 图片上传区样式
+  .admin-form__advanced            — 高级字段折叠
+
+不修改：
+  lib/artworks-data.js             — 数据流不变
+  lib/gallery-render.js            — 渲染逻辑不变
+  lib/image-fit.js                 — 图片自适应（一直存在）
+  ink-effects.js / lib/scroll-*    — 首页动画不变
+
+
+C. 性能与限制
+-------------
+- 30 秒轮询：每页每 30s 一次 GET 请求，CDN 缓存命中后 0ms
+- 部署频率：Vercel 免费层 100 次/天，足够日常使用
+- GitHub API 限制：5000 请求/小时（认证后），100 次 commit/天
+- 数据规模：当前结构支持 1000+ 作品无性能问题
+- 图片大小：单图 ≤10MB，建议 <2MB 以加快加载
+- localStorage：5MB 容量限制
+
+
+D. 关键文件路径速查
+------------------
+- 项目根：C:\Users\17316\Desktop\网页8\
+- dev-server：python dev-server.py 8080 127.0.0.1
+- admin 入口：admin.html
+- 默认口令：pzz040105AS（部署后必须改）
+- Worker 文件：workers/github-cors-proxy.js
+- 数据文件：data/artworks.json
+- 作品素材目录：素材/{id}.jpg
+- 测试：python tests/smoke-test.py
+- 操作文档：部署流程与操作规范.txt
+
+
+E. v5.20 自动布局说明
+--------------------
+- gallery.html 容器：.gallery-grid
+  之前：grid-template-columns: repeat(3, 1fr) + 2 个媒体查询
+  现在：grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))
+  效果：浏览器视口决定列数
+    320px → 1 列
+    720px → 2 列
+    1080px → 3 列
+    1440px → 4-5 列
+    1920px → 6 列
+
+- 单卡尺寸：.art-card
+  之前：固定 width
+  现在：grid auto-fill 自动算
+  高度由 .art-card__media 的 aspect-ratio（image-fit.js）决定
+  标题/价格/材质自适应
+
+- artwork.html 详情页：
+  之前：.artwork__grid { display: grid; grid-template-columns: 1.4fr 1fr }
+  现在：保持原样（详情页需要固定布局）
+  但 .artwork__img 自动按 aspect-ratio 限高，不溢出
+
+- image-fit.js 工作原理：
+  1. 监听 data-fit="true" 容器
+  2. 容器内 img 加载完成后读取 naturalWidth/naturalHeight
+  3. 设置容器的 aspect-ratio CSS
+  4. 容器保持宽高比，img 用 object-fit: contain 居中
+  5. 用户上传任意尺寸图片，容器自动适配
+
+
+================================================================================
+文档结束
+================================================================================
+- 访客作品页每 30 秒轮询一次 data/artworks.json
+- admin 保存到 GitHub → 30 秒内轮询命中
+- 总延迟 = Vercel 重建（10-30s）+ CDN 刷新（5-30s）+ 轮询间隔（0-30s）
+- 实际 30 秒-1 分钟内可见
+- 访客手动 Ctrl+R 刷新也能立即看到
+
+
+================================================================================
+四、运维与排错
+================================================================================
+
+4.1 常见错误
+-----------
+
+【症状】admin 保存后状态栏显示"已存本地，GitHub 推送失败：CORS"
+  原因：CORS 代理 URL 未配置或 Worker 不可用
+  解决：
+    1. 检查 Worker 是否部署成功（浏览器直接访问 worker URL 应返回 200/404）
+    2. 检查 admin 配置的 CORS URL 与 Worker URL 一致
+    3. 检查 Worker 代码是否完整（最后一步 Save and Deploy）
+
+【症状】测试连接显示 "401 Bad credentials"
+  原因：Token 错误或过期
+  解决：
+    1. 重新生成 PAT
+    2. 在 admin 配置面板更新 Token
+
+【症状】测试连接显示 "404 Not Found"
+  原因：仓库名写错
+  解决：
+    1. 确认仓库路径格式 "用户名/仓库名"
+    2. 检查大小写（GitHub 仓库名区分大小写）
+
+【症状】admin 保存后访客刷新看不到
+  排查步骤：
+    1. admin 状态栏是否显示"已同步到 GitHub：abc1234"？
+       - 是 → 检查 Vercel 是否触发部署
+       - 否 → GitHub 推送失败，查看错误
+    2. 访问 https://api.github.com/repos/你的仓库/contents/data/artworks.json
+       - 应该看到最新内容（raw 格式）
+       - 看到旧内容 → GitHub 推送实际没成功
+    3. 检查 Vercel Deployments 页面，是否有新部署
+       - 没有 → Vercel 没监听到 push
+       - 有但访客看不到 → CDN 缓存，等 30 秒
+    4. 强制刷新访客浏览器（Ctrl+Shift+R）绕过 CDN
+
+【症状】admin 页面输入口令后一直转圈
+  原因：浏览器不支持 Web Crypto API（旧浏览器）
+  解决：升级浏览器到 Chrome 90+ / Firefox 90+ / Safari 14+
+
+【症状】访客作品页一直显示 6 张"即将上架"占位
+  原因：admin 数据没加载
+  排查：
+    1. 浏览器开发者工具 → Network → 找 data/artworks.json
+       - 404 → 文件没部署，检查 data/ 目录
+       - 200 但内容为空 → admin 没添加作品
+    2. 强制刷新（Ctrl+Shift+R）
+
+【症状】admin "恢复默认"后作品页没有变化
+  原因：访客 localStorage 缓存了旧数据
+  解决：访客浏览器清缓存或换无痕模式访问
+
+
+4.2 日志查看
+-----------
+
+A. Vercel 部署日志
+   1. https://vercel.com/dashboard
+   2. 选项目 → Deployments
+   3. 点最新部署 → Building 标签
+
+B. Cloudflare Worker 日志
+   1. https://dash.cloudflare.com → Workers & Pages
+   2. 选 worker → Logs 标签
+   3. 实时查看请求日志
+
+C. GitHub 提交历史
+   1. 仓库页面 → Commits
+   2. 看 admin 推送的 commit 记录
+
+D. 浏览器控制台
+   1. 访客作品页 → F12 → Console
+   2. admin 页 → F12 → Console
+   3. 看是否有 CORS / 404 / TypeError
+
+
+4.3 紧急回滚
+-----------
+如 admin 误操作导致作品页损坏：
+
+方法 A：用 admin 重新编辑/删除
+方法 B：从 GitHub 历史恢复
+  1. 仓库 → data/artworks.json
+  2. 点 History
+  3. 选上一个正常版本 → Copy raw content
+  4. 在 admin "导入 JSON" 粘贴
+
+方法 C：Vercel 回滚
+  1. Vercel → Deployments
+  2. 选上一个正常部署 → Promote to Production
+
+
+4.4 数据备份策略
+---------------
+建议每周：
+1. admin 导出 JSON，下载到本地备份文件夹
+2. 文件名按日期：hgm-backup-2026-08-04.json
+
+建议每月：
+1. 检查 GitHub 仓库提交历史是否正常
+2. 检查 Vercel 部署日志是否有警告
+3. 检查 Cloudflare Worker 日志是否正常
+
+
+================================================================================
+五、安全与备份
+================================================================================
+
+5.1 安全原则
+-----------
+- admin 后端没有任何鉴权（纯静态页面），安全完全靠隐藏 URL
+- 口令以 sha256 形式存在于源码（可被查看者反查字典，但增加攻击成本）
+- PAT 存于浏览器 localStorage（不出现在源码）
+- 任何人知道 admin URL + 口令就能修改数据
+- 任何人获得 PAT 就能修改 GitHub data/artworks.json
+
+5.2 关键安全实践
+---------------
+✅ 部署后立即修改默认口令（lib/admin-config.js）
+✅ PAT 仅给本仓库 Contents 写权限，不要给其他权限
+✅ PAT 设 90 天过期，到期前重新生成并更新 admin 配置
+✅ 不要把带 ?key=xxx 的 admin URL 发给别人
+✅ 不要把 PAT 提交到任何代码仓库
+✅ Vercel/Cloudflare/Netlify 账号开启二步验证
+
+❌ 不要用 Owner PAT（应创建专用 Fine-grained token）
+❌ 不要把 admin.html 公开链接（应通过 ?key= 访问）
+❌ 不要在公共电脑保存 PAT（localStorage 会被同源 JS 读取）
+
+
+5.3 灾难恢复
+-----------
+
+【场景 1】误删所有作品
+  1. admin "导入 JSON" 上次备份
+  2. 或从 GitHub 历史恢复 data/artworks.json
+
+【场景 2】admin 口令遗忘
+  1. 浏览器开发者工具 console：
+     crypto.subtle.digest('SHA-256', new TextEncoder().encode('新口令'))
+       .then(b => console.log([...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('')))
+  2. 把 hash 粘贴到 lib/admin-config.js
+  3. commit + push，Vercel 自动部署
+
+【场景 3】GitHub 仓库被删除
+  - 数据完全丢失，无法恢复
+  - 防范：定期下载 JSON 备份到本地
+
+【场景 4】Cloudflare Worker 被删
+  - admin 仍能用，但浏览器直连 api.github.com 失败
+  - 解决：重新部署 Worker，把 URL 填回 admin 配置
+
+
+================================================================================
+六、版本更新
+================================================================================
+
+6.1 修改默认口令（必须做）
+------------------------
+A. 浏览器开发者工具 console 执行：
+   crypto.subtle.digest('SHA-256', new TextEncoder().encode('你的新口令'))
+     .then(b => console.log(console.log([...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('')))
+
+B. 编辑 lib/admin-config.js，替换：
+   window.HGM_ADMIN_KEY_HASH = '这里填上面的输出';
+
+C. 同步修改 lib/admin.js 第 26 行的 fallback hash（保持一致）
+
+D. 更新 README.md 部署文档中的"默认口令"说明
+
+E. commit + push（或 git push origin main）
+
+
+6.2 修改 Cloudflare Worker（如果 GitHub API 有重大变化）
+----------------------------------------------------------
+1. https://dash.cloudflare.com → Workers & Pages → 选 worker
+2. Edit code
+3. 修改 workers/github-cors-proxy.js（本地修改后复制）
+4. Save and Deploy
+
+
+6.3 修改轮询间隔（如觉得 30 秒太久/太久）
+----------------------------------------
+编辑 lib/artworks-data.js 第 248 行：
+  window.startArtworksPolling(30000);
+              改时间（毫秒）：
+              - 10 秒：10000（更实时但更多请求）
+              - 60 秒：60000（更省流量但延迟大）
+              - 推荐：15000-30000
+
+
+6.4 数据迁移（如换 GitHub 仓库）
+-------------------------------
+1. 在 admin 导出当前数据为 JSON
+2. 在新仓库建立 data/ 目录
+3. 在新仓库的 admin 配置页面更新仓库地址
+4. 测试连接 → 通过
+5. 导入 JSON → 数据自动同步到新仓库
+6. 删除旧仓库（确认后再删）
+
+
+6.5 联系与支持
+------------
+- 项目 README.md：项目根目录
+- 设计文档：docs/superpowers/specs/
+- 实施计划：docs/superpowers/plans/
+
+
+================================================================================
+【附录】关键技术细节
+================================================================================
+
+A. 数据流向（详细）
+----------------
+管理员浏览器：
+  admin.html 增/删/改
+    → lib/admin.js → localStorage（瞬时）
+    → lib/github-api.js PUT data/artworks.json（异步）
+    → 成功：状态栏 "已同步到 GitHub"
+    → 失败：状态栏 "已存本地，GitHub 推送失败"（不影响 UI）
+
+GitHub：
+  仓库 data/artworks.json 被 commit
+    ↓
+  静态托管平台（Vercel）监听 push
+    ↓
+  触发自动构建
+    ↓
+  部署新版本到 CDN
+
+访客浏览器：
+  打开 /gallery.html
+    → lib/artworks-data.js
+    → 启动：fetch data/artworks.json → 写入 localStorage
+    → 每 30 秒：setInterval 重新 fetch
+    → 若 exportedAt 变化：更新 localStorage + 派发 'hgm-artworks-updated'
+    → lib/gallery-render.js 监听事件 → 重新渲染列表
+
+
+B. 文件清单（与本流程相关）
+---------------------------
+新增：
+  data/artworks.json               — 作品数据源
+  lib/github-api.js                — GitHub Contents API 封装
+  workers/github-cors-proxy.js      — Cloudflare Worker CORS 代理
+
+修改：
+  admin.html                       — GitHub 配置面板
+  lib/admin.js                     — 同步 GitHub 推送
+  lib/admin-config.js              — 口令 hash
+  lib/artworks-data.js             — 数据源 + 30s 轮询
+  lib/gallery-render.js            — 监听更新事件
+  lib/artwork-render.js            — 监听更新事件
+  README.md                        — 部署文档
+  部署流程与操作规范.txt            — 本文件
+
+
+C. 性能与限制
+-------------
+- 30 秒轮询：每页每 30s 一次 GET 请求，CDN 缓存命中后 0ms
+- 部署频率：Vercel 免费层 100 次/天，足够日常使用
+- GitHub API 限制：5000 请求/小时（认证后），100 次 commit/天
+- 数据规模：当前结构支持 1000+ 作品无性能问题
+
+
+D. 关键文件路径速查
+------------------
+- 项目根：C:\Users\17316\Desktop\网页8\
+- dev-server：python dev-server.py 8080 127.0.0.1
+- admin 入口：admin.html
+- 默认口令：pzz040105AS（部署后必须改）
+- Worker 文件：workers/github-cors-proxy.js
+- 数据文件：data/artworks.json
+- 测试：python tests/smoke-test.py
+
+
+================================================================================
+文档结束
+================================================================================

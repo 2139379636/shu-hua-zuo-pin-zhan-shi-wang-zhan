@@ -1,0 +1,53 @@
+.DS_Store
+Thumbs.db
+
+# 损坏/异常文件名（不应提交）
+REPLACEMENTS[c])
+
+# Superpowers 工作流临时文件（开发工具副产物，非项目产物）
+.superpowers/
+
+# 编辑器/IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node 生态（虽然项目用 vanilla JS，但保留以防未来加构建工具）
+node_modules/
+.npm/
+.yarn/
+
+# Python（dev-server.py + tests/）
+__pycache__/
+*.py[cod]
+*.egg-info/
+.python-version
+
+# 缓存与临时
+.cache/
+*.log
+.env
+.env.*
+!/.env.example
+.local
+
+# 截图 / 测试副产物（项目运行时不需要，仅开发用）
+screenshots/
+tests/screenshots/
+tests/_g_shots/
+tests/_capture_vertical_rewrite/
+tests/_verify_*.py.bak
+tests/_debug_*.py.bak
+**/*.pyc
+
+# Playwright
+__snapshots__/
+.playwright/
+playwright-report/
+test-results/
+
+# 系统/上传临时文件
+$RECYCLE.BIN/
+*.tmp
+*.bak

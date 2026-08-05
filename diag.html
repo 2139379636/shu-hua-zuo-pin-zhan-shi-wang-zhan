@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>浮层诊断</title>
+<style>
+  body { font-family: monospace; background: #1A1A1A; color: #F5F1E8; padding: 20px; }
+  pre { background: #2A2A2A; padding: 10px; border-radius: 4px; }
+  .ok { color: #5DBB63; }
+  .fail { color: #D9534F; }
+  h2 { color: #A8332C; }
+</style>
+</head>
+<body>
+<h2>ScrollStory 浮层诊断</h2>
+<p>访问此页查看模块加载状态，复制 Console 输出发给我。</p>
+
+<button id="runDiag" style="padding: 10px 20px; background: #A8332C; color: white; border: none; border-radius: 4px; cursor: pointer;">
+  运行诊断
+</button>
+
+<pre id="output"></pre>
+
+<script>
+document.getElementById('runDiag').addEventListener('click', async () => {
+  const out = document.getElementById('output');
+  out.textContent = '';
+  const log = (msg, isError = false) => {
+    const line = document.createElement('div');
+    line.className = isError ? 'fail' : 'ok';
+    line.textContent = msg;
+    out.appendChild(line);
+    console.log(msg);
+  };
+
+  log('=== 诊断开始 ===');
+
+  // 1. 模块加载
+  log(`[1] window.INTRO_OVERLAY: ${typeof window.INTRO_OVERLAY}`);
+  if (window.INTRO_OVERLAY) {
+    log(`    - update: ${typeof window.INTRO_OVERLAY.update}`);
+    log(`    - boot: ${typeof window.INTRO_OVERLAY.boot}`);
+  }
+
+  // 2. ScrollTrigger
+  if (typeof window.ScrollTrigger === 'undefined') {
+    log('[2] ScrollTrigger: MISSING', true);
+  } else {
+    const triggers = window.ScrollTrigger.getAll();
+    log(`[2] ScrollTrigger.getAll().length: ${triggers.length}`);
+    const story = triggers.find(t => t.trigger && t.trigger.id === 'scroll-story');
+    if (story) {
+      log(`    - start: ${story.start}`);
+      log(`    - end: ${story.end}`);
+      log(`    - progress: ${story.progress.toFixed(3)}`);
+    } else {
+      log('    - #scroll-story 实例未找到', true);
+    }
+  }
+
+  // 3. 浮层元素
+  const root = document.getElementById('introOverlay');
+  if (!root) {
+    log('[3] #introOverlay 元素: MISSING (HTML 未引入)', true);
+  } else {
+    log(`[3] #introOverlay 元素: 存在`);
+    const cs = getComputedStyle(root);
+    log(`    - position: ${cs.position}`);
+    log(`    - opacity: ${cs.opacity}`);
+    log(`    - visibility: ${cs.visibility}`);
+    log(`    - z-index: ${cs.zIndex}`);
+    const name = document.querySelector('.intro-overlay__name');
+    const line = document.querySelector('.intro-overlay__line');
+    log(`    - name text: ${name ? name.textContent : 'MISSING'}`);
+    log(`    - line text: ${line ? line.textContent : 'MISSING'}`);
+  }
+
+  // 4. 实时模拟：3 段进度
+  log('');
+  log('=== 实时模拟 3 段进度 ===');
+  if (window.INTRO_OVERLAY && window.ScrollTrigger) {
+    const story = window.ScrollTrigger.getAll().find(t => t.trigger && t.trigger.id === 'scroll-story');
+    if (story) {
+      for (const p of [0.0, 0.3, 0.5, 0.7, 1.0]) {
+        const fakeScroll = story.start + (story.end - story.start) * p;
+        window.scrollTo(0, fakeScroll);
+        await new Promise(r => setTimeout(r, 600));
+        const name = parseFloat(getComputedStyle(document.querySelector('.intro-overlay__name')).opacity);
+        const line = parseFloat(getComputedStyle(document.querySelector('.intro-overlay__line')).opacity);
+        log(`    progress=${p}  scrollY=${fakeScroll}  name=${name.toFixed(2)}  line=${line.toFixed(2)}`);
+      }
+    }
+  }
+
+  log('=== 诊断完成 ===');
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "version": "2026-08-04",
+  "exportedAt": "2026-08-04T00:00:00.000Z",
+  "artworks": [],
+  "poems": [
+    { "id": 1, "text": "清江一曲绕山流", "author": "黄桂明", "usage": "hero-banner" },
+    { "id": 2, "text": "江岸奇峰耸，行舟顺水流。风吟诗意绕，一路画中游。", "author": "黄桂明", "usage": "detail-citation" },
+    { "id": 3, "text": "奇峰迎晓日，清渡载行舟。客望千山翠，诗成韵自悠。", "author": "黄桂明", "usage": "verse-section" }
+  ],
+  "brand": {
+    "name": "黄桂明",
+    "shortName": "桂明",
+    "tagline": "诗情画意 · 桂林山水",
+    "email": "huang.guiming@art.com",
+    "phone": "+86 771 8000 0000",
+    "location": "桂林",
+    "navMark": "黄",
+    "intro": {
+      "name": "黄桂明 · 桂林山水",
+      "line": "清江一曲绕山流 · 江岸奇峰耸"
+    }
+  }
+}

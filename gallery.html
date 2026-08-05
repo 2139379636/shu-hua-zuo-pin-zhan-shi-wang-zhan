@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>黄桂明作品集</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=20260730b">
+</head>
+<body>
+
+  <!-- Navigation (由 lib/nav.js 注入) -->
+  <nav id="nav" aria-label="主导航"></nav>
+
+  <!-- Page Header -->
+  <header class="page-header">
+    <span class="eyebrow eyebrow--seal">Collection · 作品集</span>
+    <h1 class="page-header__title">黄桂明画家的作品</h1>
+    <p class="page-header__sub">每一幅皆为原创，含艺术家亲笔题诗、签名与钤印。</p>
+  </header>
+
+  <!-- Gallery -->
+  <section class="featured" style="padding-top: 80px;">
+    <div class="container">
+
+      <!-- Grid -->
+      <div class="gallery-grid" id="galleryGrid">
+        <!-- 由 lib/gallery-render.js 动态注入 9 张精选 -->
+      </div>
+
+      <!-- 跳转至艺术家页的「十年精选」代表作 section -->
+      <div class="gallery-cta">
+        <a href="artist.html#selected" class="featured__more">十年精选 →</a>
+        <p class="gallery-cta__hint">画家十年代表作 · 艺术家页面</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer (由 lib/footer.js 注入) -->
+  <footer id="footer" aria-label="页脚"></footer>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <span class="toast__seal"></span>
+    <span id="toastMsg">已加载</span>
+  </div>
+
+  <!-- 渲染 / 入场动画 / toast 由 lib/gallery-render.js 提供 -->
+  <script src="lib/escape-html.js" defer></script>
+  <script src="lib/svg-defs.js" defer></script>
+  <script src="lib/artworks-data.js" defer></script>
+  <script src="lib/nav.js?v=20260731e" defer></script>
+  <script src="lib/footer.js?v=20260731f" defer></script>
+  <script src="lib/image-fit.js?v=20260801a" defer></script>
+  <script src="lib/gallery-render.js" defer></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', function(){
+      NAV_BOOT({ homepage: false });
+      FOOTER_BOOT();
+    });
+  </script>
+</body>
+</html>

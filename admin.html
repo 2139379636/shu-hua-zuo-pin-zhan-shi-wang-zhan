@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>黄桂明 · 作品管理</title>
+  <link rel="stylesheet" href="styles.css?v=20260731f">
+  <style>
+    /* 管理后台专用样式（避免污染主样式） */
+    body { background: var(--color-paper-warm, #FAF7EF); }
+    .admin-shell { max-width: 1100px; margin: 0 auto; padding: 48px 32px; }
+
+    /* 持久化策略提示 banner */
+    .admin-persistence {
+      background: #FFFBF0;
+      border: 1px solid #E8D9A8;
+      border-left: 3px solid #A8332C;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #1A1A1A;
+      border-radius: 4px;
+    }
+    .admin-persistence__title {
+      font-family: var(--font-serif);
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .admin-persistence ol {
+      margin: 4px 0 0 20px;
+      padding: 0;
+    }
+    .admin-persistence code {
+      background: rgba(168,51,44,0.08);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-family: 'SF Mono', 'Consolas', monospace;
+    }
+
+    .admin-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--color-divider, #E5E0D5); }
+    .admin-header h1 { font-family: var(--font-serif); font-size: 28px; margin: 0; color: var(--color-ink, #1A1A1A); }
+    .admin-header__actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    /* v5.20 — GitHub 同步配置面板 */
+    .admin-config { background: var(--color-paper-warm, #EBE4D2); border: 1px solid var(--color-divider, #E5E0D5); border-radius: 4px; padding: 24px; margin-bottom: 24px; }
+    .admin-config__header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--color-divider, #E5E0D5); }
+    .admin-config__header h2 { font-family: var(--font-serif); font-size: 18px; margin: 0; color: var(--color-ink, #1A1A1A); font-weight: 500; }
+    .admin-config__status { font-size: 13px; color: var(--color-ink-mute, #666); }
+    .admin-config .admin-form__field { margin-bottom: 12px; }
+    .admin-config .admin-form__field label { display: block; font-size: 12px; color: var(--color-ink-mute, #666); margin-bottom: 4px; font-weight: 500; }
+    .admin-config .admin-form__field input { width: 100%; padding: 8px 12px; font-size: 14px; border: 1px solid var(--color-divider, #E5E0D5); border-radius: 3px; background: white; font-family: inherit; box-sizing: border-box; }
+    .admin-config .admin-form__row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+    .admin-config .admin-form__row .admin-form__field { margin-bottom: 0; }
+    .admin-config .admin-form__hint { font-size: 12px; color: var(--color-ink-mute, #666); line-height: 1.6; padding: 12px; background: #FFFBF0; border-left: 3px solid #E8B84A; border-radius: 3px; margin-bottom: 16px; }
+    .admin-config .admin-form__hint code { background: rgba(0,0,0,0.05); padding: 1px 6px; border-radius: 2px; font-family: 'SF Mono', 'Consolas', monospace; font-size: 11px; }
+    .admin-config .admin-form__actions { display: flex; gap: 12px; margin-top: 16px; }
+    .admin-config .admin-form__error { font-size: 13px; min-height: 1.4em; margin-top: 8px; }
+    @media (max-width: 640px) {
+      .admin-config .admin-form__row { grid-template-columns: 1fr; }
+    }
+    .admin-auth { max-width: 400px; margin: 80px auto; background: var(--color-paper, #F5F1E8); padding: 48px; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); text-align: center; }
+    .admin-auth h1 { font-family: var(--font-serif); font-size: 24px; margin: 0 0 24px; }
+    .admin-auth input { width: 100%; padding: 12px 16px; font-size: 16px; border: 1px solid var(--color-divider, #E5E0D5); border-radius: 4px; background: white; }
+    .admin-auth button { margin-top: 16px; padding: 12px 32px; }
+    .admin-auth__error { color: var(--color-seal, #A8332C); margin-top: 12px; font-size: 14px; min-height: 1.4em; }
+    .admin-row { display: grid; grid-template-columns: 80px 1fr auto; gap: 20px; align-items: center; padding: 20px 0; border-bottom: 1px solid var(--color-divider, #E5E0D5); }
+    .admin-row__thumb { width: 80px; /* aspect-ratio 由 lib/image-fit.js 按图片原比例动态设置 */ background: var(--color-paper, #F5F1E8); border: 1px solid var(--color-divider, #E5E0D5); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.admin-row__thumb img { width: 100%; height: 100%; object-fit: contain; }
+    .admin-row__thumb--placeholder { display: flex; align-items: center; justify-content: center; color: var(--color-ink-mute, #666); font-size: 12px; }
+    .admin-row__meta { font-size: 14px; color: var(--color-ink-mute, #666); margin-top: 4px; }
+    .admin-row__poem { font-size: 13px; color: var(--color-ink-mute, #666); margin-top: 4px; font-style: italic; }
+    .admin-row__actions { display: flex; gap: 8px; }
+    .btn--small { padding: 6px 14px; font-size: 14px; }
+
+    /* 编辑抽屉 */
+    .admin-drawer { position: fixed; top: 0; right: 0; width: 640px; max-width: 100vw; height: 100vh; background: var(--color-paper, #F5F1E8); box-shadow: -4px 0 24px rgba(0,0,0,0.12); overflow-y: auto; transform: translateX(100%); transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; }
+    .admin-drawer.is-open { transform: translateX(0); }
+    .admin-drawer__inner { padding: 32px; }
+    .admin-drawer__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider, #E5E0D5); }
+    .admin-drawer__header h2 { font-family: var(--font-serif); margin: 0; font-size: 22px; }
+    .admin-form__field { margin-bottom: 16px; }
+    .admin-form__field label { display: block; font-size: 13px; color: var(--color-ink-mute, #666); margin-bottom: 4px; }
+    .admin-form__field input, .admin-form__field textarea { width: 100%; padding: 8px 12px; font-size: 14px; border: 1px solid var(--color-divider, #E5E0D5); border-radius: 4px; background: white; font-family: inherit; }
+    .admin-form__field textarea { min-height: 60px; resize: vertical; }
+    .admin-form__field input[type="checkbox"] { width: auto; margin-right: 6px; }
+    .admin-form__row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .admin-form__actions { display: flex; gap: 12px; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--color-divider, #E5E0D5); justify-content: flex-end; }
+
+    /* v5.20 — 极简表单：图片上传区 + 高级字段折叠 */
+    .image-upload { display: flex; flex-direction: column; gap: 12px; padding: 12px; border: 1px dashed var(--color-divider, #E5E0D5); border-radius: 4px; background: rgba(255,255,255,0.5); }
+    .image-upload__preview { position: relative; min-height: 180px; max-height: 320px; display: flex; align-items: center; justify-content: center; background: var(--color-paper-warm, #EBE4D2); border-radius: 3px; overflow: hidden; }
+    .image-upload__preview img { max-width: 100%; max-height: 320px; object-fit: contain; display: block; }
+    .image-upload__preview.has-image .image-upload__hint { display: none; }
+    .image-upload__hint { color: var(--color-ink-mute, #666); font-size: 13px; padding: 24px; text-align: center; }
+    .image-upload__row { display: flex; gap: 8px; align-items: center; }
+    .image-upload__row input[type="text"] { flex: 1; padding: 6px 10px; font-size: 13px; border: 1px solid var(--color-divider, #E5E0D5); border-radius: 3px; background: white; font-family: inherit; }
+    .image-upload__hint-text { font-size: 12px; color: var(--color-ink-mute, #666); }
+    .image-upload__hint-text code { background: rgba(0,0,0,0.05); padding: 1px 6px; border-radius: 2px; font-family: 'SF Mono', 'Consolas', monospace; font-size: 11px; }
+    .image-upload.dragover { border-color: var(--color-seal, #A8332C); background: rgba(168,51,44,0.04); }
+    .admin-form__advanced { margin-top: 8px; padding: 12px; background: rgba(255,255,255,0.4); border-radius: 4px; }
+    .admin-form__advanced summary { cursor: pointer; font-size: 13px; color: var(--color-ink-mute, #666); padding: 4px 0; user-select: none; }
+    .admin-form__advanced summary:hover { color: var(--color-ink, #1A1A1A); }
+    .admin-form__advanced[open] summary { margin-bottom: 12px; color: var(--color-ink, #1A1A1A); font-weight: 500; }
+    .admin-form__advanced .admin-form__field select { width: 100%; padding: 8px 12px; font-size: 14px; border: 1px solid var(--color-divider, #E5E0D5); border-radius: 3px; background: white; font-family: inherit; box-sizing: border-box; }
+    .admin-form__error { color: var(--color-seal, #A8332C); font-size: 13px; margin-top: 8px; min-height: 1.4em; }
+
+    /* 删除确认 */
+    .admin-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 200; }
+    .admin-modal.is-open { display: flex; }
+    .admin-modal__box { background: var(--color-paper, #F5F1E8); padding: 32px; border-radius: 8px; max-width: 400px; width: 100%; }
+    .admin-modal__box h3 { font-family: var(--font-serif); margin: 0 0 12px; }
+    .admin-modal__warning { font-size: 13px; color: var(--color-seal, #A8332C); margin: 12px 0; }
+    .admin-modal__actions { display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end; }
+
+    /* Toast */
+    .admin-toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: var(--color-ink, #1A1A1A); color: var(--color-paper, #F5F1E8); padding: 12px 24px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; transition: opacity 240ms; pointer-events: none; z-index: 300; }
+    .admin-toast.is-visible { opacity: 1; }
+
+    .admin-empty { text-align: center; padding: 64px 32px; color: var(--color-ink-mute, #666); }
+  </style>
+</head>
+<body>
+
+  <!-- 入口校验 -->
+  <div id="authGate" class="admin-auth" style="display:none;">
+    <h1>🖋️ 黄桂明 · 作品管理</h1>
+    <p style="color:var(--color-ink-mute);margin:0 0 24px;">请输入管理员口令</p>
+    <form id="authForm">
+      <input type="password" id="authKey" placeholder="管理员口令" autocomplete="off" autofocus>
+      <button type="submit" class="btn btn--primary">进入</button>
+    </form>
+    <div id="authError" class="admin-auth__error"></div>
+  </div>
+
+  <!-- 主管理界面 -->
+  <main id="adminPanel" class="admin-shell" style="display:none;">
+
+    <!-- 持久化策略提示：作品页数据 = admin localStorage + (可选) data/artworks.json -->
+    <aside class="admin-persistence" id="adminPersistenceBanner">
+      <div class="admin-persistence__title">💾 数据保存机制 — 部署后如何保留作品？</div>
+      <div>
+        <strong>本管理界面管理的是"作品页"</strong>（gallery / artwork / artist），不是首页的非卖品展示。
+        您添加/编辑/删除后立即在作品页可见。数据的保留方式：
+      </div>
+      <ol>
+        <li><strong>localStorage（自动）</strong> — 同一浏览器永久保留，无需任何操作。</li>
+        <li><strong>GitHub 同步（部署后实时生效）</strong> — 在下方"GitHub 配置"中填入仓库 + Personal Access Token，保存时自动 commit <code>data/artworks.json</code>。Vercel/Netlify/CloudFlare Pages 监听 push 后几秒到几十秒内自动重新部署，访客刷新即可看到。</li>
+        <li><strong>导出 JSON（兜底）</strong> — 任何情况下都可点"导出 JSON"下载文件，离线备份或手动部署。</li>
+      </ol>
+    </aside>
+
+    <!-- GitHub 同步配置（保存到 localStorage，不进源码） -->
+    <section class="admin-config" id="githubConfigPanel" aria-label="GitHub 同步配置">
+      <header class="admin-config__header">
+        <h2>🔗 GitHub 同步配置</h2>
+        <span class="admin-config__status" id="githubConfigStatus">未配置</span>
+      </header>
+      <form id="githubConfigForm" class="admin-form">
+        <div class="admin-form__field">
+          <label>仓库（<code>用户名/仓库名</code>）</label>
+          <input type="text" name="repo" placeholder="例如：username/huang-guiming-gallery" autocomplete="off">
+        </div>
+        <div class="admin-form__row">
+          <div class="admin-form__field">
+            <label>分支（默认 main）</label>
+            <input type="text" name="branch" placeholder="main" autocomplete="off">
+          </div>
+          <div class="admin-form__field">
+            <label>Personal Access Token（Contents 写权限）</label>
+            <input type="password" name="token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+          </div>
+        </div>
+        <div class="admin-form__field">
+          <label>CORS 代理 URL（部署后填，详见 workers/github-cors-proxy.js）</label>
+          <input type="text" name="proxy" placeholder="https://hgm-github-proxy.your-name.workers.dev" autocomplete="off">
+        </div>
+        <div class="admin-form__hint">
+          ⚠️ Token 存于本浏览器 localStorage，不会进源码。建议创建专用 PAT：<br>
+          <code>Settings → Developer settings → Personal access tokens → Fine-grained tokens</code>，
+          仅勾选本仓库的 <strong>Contents: Read and write</strong>。建议设 90 天过期。<br>
+          <br>
+          🌐 浏览器直连 <code>api.github.com</code> 会被 CORS 阻止。需先部署 <code>workers/github-cors-proxy.js</code> 到 Cloudflare Workers，把 worker URL 填到上方"CORS 代理"字段。
+        </div>
+        <div class="admin-form__actions">
+          <button type="button" class="btn btn--ghost-dark btn--small" id="btnTestGithub">测试连接</button>
+          <button type="button" class="btn btn--ghost-dark btn--small" id="btnClearGithub">清除配置</button>
+          <button type="submit" class="btn btn--primary btn--small" id="btnSaveGithub">保存配置</button>
+        </div>
+        <div class="admin-form__error" id="githubConfigError"></div>
+        <div class="admin-form__error" id="githubConfigOk"></div>
+      </form>
+    </section>
+
+    <header class="admin-header">
+      <h1>🖋️ 黄桂明 · 作品管理</h1>
+      <div class="admin-header__actions">
+        <button type="button" class="btn btn--ghost-dark btn--small" id="btnAdd">＋ 添加作品</button>
+        <button type="button" class="btn btn--ghost-dark btn--small" id="btnExport">导出 JSON</button>
+        <button type="button" class="btn btn--ghost-dark btn--small" id="btnImport">导入 JSON</button>
+        <button type="button" class="btn btn--ghost-dark btn--small" id="btnReset">恢复默认</button>
+      </div>
+    </header>
+    <div id="artworkList" class="admin-list"></div>
+    <input type="file" id="fileInput" accept="application/json" style="display:none;">
+  </main>
+
+  <!-- 编辑抽屉 -->
+  <aside id="editorDrawer" class="admin-drawer" aria-hidden="true">
+    <div class="admin-drawer__inner">
+      <div class="admin-drawer__header">
+        <h2 id="editorTitle">编辑作品</h2>
+        <button type="button" class="btn btn--ghost-dark btn--small" id="btnCloseEditor">✕ 关闭</button>
+      </div>
+      <form id="editorForm" class="admin-form">
+        <!-- v5.20 — 极简表单：图片 + 标题 + 分类 + 描述，其他字段都自动/可选 -->
+
+        <!-- 图片上传区：点选/拖拽/粘贴 URL -->
+        <div class="admin-form__field">
+          <label>作品图片 <span style="color:var(--color-seal)">*</span></label>
+          <div class="image-upload" id="imageUpload">
+            <div class="image-upload__preview" id="imageUploadPreview">
+              <span class="image-upload__hint">点击选择图片 / 拖入文件 / 粘贴 URL</span>
+            </div>
+            <div class="image-upload__row">
+              <label class="btn btn--ghost-dark btn--small">
+                📁 选择文件
+                <input type="file" id="imageUploadFile" accept="image/*" style="display:none;">
+              </label>
+              <input type="text" id="imageUploadUrl" placeholder="或粘贴图片 URL" autocomplete="off">
+              <button type="button" class="btn btn--ghost-dark btn--small" id="imageUploadClear">清除</button>
+            </div>
+            <div class="image-upload__hint-text">
+              <span id="imageUploadStatus">未选图</span> · 保存时若已配 GitHub 会自动上传到 <code>素材/</code> 目录
+            </div>
+          </div>
+          <input type="hidden" name="image" id="imageFinalValue" required>
+        </div>
+
+        <div class="admin-form__field">
+          <label>标题 <span style="color:var(--color-seal)">*</span></label>
+          <input type="text" name="title" placeholder="如：清江一曲绕山流" required>
+        </div>
+
+        <div class="admin-form__field">
+          <label>分类（逗号分隔）</label>
+          <input type="text" name="category" placeholder="漓江, 山水" value="桂林山水">
+        </div>
+
+        <div class="admin-form__row">
+          <div class="admin-form__field">
+            <label>题画诗</label>
+            <input type="text" name="citation" placeholder="如：清江一曲绕山流 · 江岸奇峰耸">
+          </div>
+          <div class="admin-form__field">
+            <label>年份</label>
+            <input type="text" name="year" placeholder="2024">
+          </div>
+        </div>
+
+        <div class="admin-form__field">
+          <label>描述</label>
+          <textarea name="description" placeholder="作品的简要描述、创作背景等..." rows="3"></textarea>
+        </div>
+
+        <details class="admin-form__advanced">
+          <summary>高级字段（可选）</summary>
+          <div class="admin-form__row">
+            <div class="admin-form__field">
+              <label>价格 (¥)</label>
+              <input type="number" name="price" min="0" step="100" placeholder="0">
+            </div>
+            <div class="admin-form__field">
+              <label>地点</label>
+              <input type="text" name="location" placeholder="桂林">
+            </div>
+          </div>
+          <div class="admin-form__row">
+            <div class="admin-form__field">
+              <label>尺寸（长 × 宽 cm）</label>
+              <input type="text" name="size" placeholder="100 × 50">
+            </div>
+            <div class="admin-form__field">
+              <label>形式</label>
+              <select name="format">
+                <option value="">自动判断</option>
+                <option value="横幅">横幅</option>
+                <option value="竖幅">竖幅</option>
+                <option value="方形">方形</option>
+                <option value="镜片">镜片</option>
+                <option value="卷轴">卷轴</option>
+              </select>
+            </div>
+          </div>
+          <div class="admin-form__row">
+            <div class="admin-form__field">
+              <label>材质</label>
+              <select name="material">
+                <option value="宣纸 · 水墨">宣纸 · 水墨</option>
+                <option value="宣纸 · 设色">宣纸 · 设色</option>
+                <option value="绢本 · 设色">绢本 · 设色</option>
+                <option value="宣纸 · 泼墨">宣纸 · 泼墨</option>
+              </select>
+            </div>
+            <div class="admin-form__field">
+              <label>在售</label>
+              <select name="inStock">
+                <option value="true">在售</option>
+                <option value="false">非卖</option>
+              </select>
+            </div>
+          </div>
+        </details>
+
+        <div id="editorError" class="admin-form__error"></div>
+        <div class="admin-form__actions">
+          <button type="button" class="btn btn--ghost-dark" id="btnCancelEditor">取消</button>
+          <button type="submit" class="btn btn--primary" id="btnSave">保存</button>
+        </div>
+      </form>
+    </div>
+  </aside>
+
+  <!-- 删除确认弹窗 -->
+  <div id="deleteModal" class="admin-modal" aria-hidden="true">
+    <div class="admin-modal__box">
+      <h3>⚠️ 确认删除？</h3>
+      <p id="deleteTarget">作品标题</p>
+      <p class="admin-modal__warning">此操作不可恢复（数据将从 localStorage 中彻底清除）</p>
+      <div class="admin-modal__actions">
+        <button type="button" class="btn btn--ghost-dark" id="btnCancelDelete">取消</button>
+        <button type="button" class="btn btn--primary" id="btnConfirmDelete" style="background:var(--color-seal);border-color:var(--color-seal);">永久删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="admin-toast"></div>
+
+  <script src="lib/escape-html.js" defer></script>
+  <script src="lib/admin-config.js?v=20260801a" defer></script>
+  <script src="lib/github-api.js?v=20260804a" defer></script>
+  <script src="lib/image-fit.js?v=20260801a" defer></script>
+  <script src="lib/admin.js?v=20260804a" defer></script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>作品详情 · 黄桂明作品集</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=20260730b">
+</head>
+<body>
+
+  <!-- Navigation (由 lib/nav.js 注入) -->
+  <nav id="nav" aria-label="主导航"></nav>
+
+  <!-- Artwork Detail (由 lib/artwork-render.js 动态注入) -->
+  <section class="artwork">
+    <div class="container">
+      <div id="artworkRoot">
+        <!-- 由 lib/artwork-render.js 根据 URL ?id=N 渲染 -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Story / 创作随笔 -->
+  <section class="verse" style="background: var(--color-paper-warm);">
+    <p class="verse__text" style="font-size: 1.125rem; max-width: 60ch; margin: 0 auto;">
+      "古人画山水，今人画山水。<br>
+      漓江的山水，养我十年，<br>
+      我便把它一寸一寸还给宣纸。"
+    </p>
+    <p class="verse__author" style="margin-top: 24px;">— 黄桂明 · 创作手记</p>
+  </section>
+
+  <!-- 相似作品 -->
+  <section class="featured">
+    <div class="container">
+      <div class="featured__head">
+        <div>
+          <span class="eyebrow eyebrow--seal">相似 · Related</span>
+          <h2 class="featured__title">您或许也喜欢</h2>
+        </div>
+        <a href="gallery.html" class="featured__more">浏览全部 →</a>
+      </div>
+
+      <!-- 由 lib/artwork-render.js 的 renderRelated() 动态渲染（同类目优先，排除占位数据） -->
+      <div class="gallery-grid" id="relatedGrid"></div>
+    </div>
+  </section>
+
+  <!-- Footer (由 lib/footer.js 注入) -->
+  <footer id="footer" aria-label="页脚"></footer>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <span class="toast__seal"></span>
+    <span id="toastMsg">已添加意向</span>
+  </div>
+
+  <!-- 公共导航注入 + 作品详情渲染 -->
+  <script src="lib/escape-html.js" defer></script>
+  <script src="lib/svg-defs.js" defer></script>
+  <script src="lib/artworks-data.js" defer></script>
+  <script src="lib/nav.js?v=20260731e" defer></script>
+  <script src="lib/footer.js?v=20260731f" defer></script>
+  <script src="lib/image-fit.js?v=20260801a" defer></script>
+  <script src="lib/artwork-render.js" defer></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', function(){
+      NAV_BOOT({ homepage: false });
+      FOOTER_BOOT();
+    });
+  </script>
+</body>
+</html>

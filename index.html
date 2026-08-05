@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="黄桂明 · 桂林山水画家 —— 诗情画意，笔耕四十余年。">
+  <title>黄桂明 · 桂林山水画家</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=20260730b">
+</head>
+<body>
+
+  <!-- Loader -->
+  <div class="loader" id="loader" aria-hidden="true">
+    <div class="loader__inner">
+      <div class="loader__seal">黄</div>
+      <div class="loader__brand">黄桂明</div>
+      <div class="loader__caption">诗情画意 · 桂林山水 · 笔耕四十余年</div>
+      <div class="loader__progress"><div class="loader__progress-bar" id="loaderBar"></div></div>
+      <div class="loader__count"><span id="loaderCount">0</span><span class="loader__percent">%</span></div>
+      <div class="loader__hint">正在准备山水画面…</div>
+    </div>
+  </div>
+
+  <!-- Curtain（页间过场） -->
+  <div class="curtain" id="curtain" aria-hidden="true"></div>
+
+  <!-- SVG Defs（ink-edge 滤镜由 lib/svg-defs.js 注入，5 页共用） -->
+
+  <!-- Nav (由 lib/nav.js 注入) -->
+  <nav id="nav" aria-label="主导航"></nav>
+
+  <!-- Hero 鼠标遮罩（逻辑由 ink-effects bootHero 处理） -->
+  <section class="hero" id="hero" aria-label="作品展示">
+    <div class="hero__layers">
+      <img src="留白.png" alt="新中式客厅，墙面留白" class="hero__layer hero__layer--base">
+      <img src="有画.png" alt="新中式客厅，挂有水墨山水画" class="hero__layer hero__layer--reveal" id="heroReveal">
+    </div>
+    <div class="hero__grain" aria-hidden="true"></div>
+    <div class="hero__cursor-dot" id="heroCursorDot" aria-hidden="true"></div>
+
+    <div class="hero__content">
+      <h1 class="hero__title" data-ink-reveal>
+        清江一曲<br>绕山流
+      </h1>
+      <p class="hero__subtitle" data-ink-reveal>
+        —— 诗情画意 · 桂林山水
+      </p>
+    </div>
+
+    <div class="hero__scroll" aria-hidden="true">
+      <span>向下</span>
+      <span class="hero__scroll-line"></span>
+    </div>
+  </section>
+
+  <!-- ScrollStory 锁定叙事（GSAP ScrollTrigger.pin + scrub） -->
+  <section class="scroll-story" id="scroll-story" aria-label="黄桂明绘画过程">
+    <!-- Light Rays 远山青光线背景（letterbox 装裱空间，z-index 0，painting 覆盖后只露出 letterbox） -->
+    <canvas id="lightRaysBg" class="light-rays-bg" aria-hidden="true"></canvas>
+    <canvas id="scrollStoryCanvas" class="scroll-story__canvas"></canvas>
+
+    <!-- ScrollStory 序幕（艺术家介绍） — 双列竖排（姓名 + 题画诗），让出 72px 顶导 -->
+    <div id="introOverlay" class="intro-overlay" aria-hidden="true">
+      <article class="ssc__card ssc__card--prologue" role="listitem" data-ssc-card="0" aria-hidden="true">
+        <span class="ssc__rule" aria-hidden="true"></span>
+        <h2 class="intro-overlay__name" data-intro="name" aria-hidden="true"></h2>
+        <span class="intro-overlay__rule-vertical" aria-hidden="true"></span>
+        <p class="intro-overlay__line" data-intro="line" aria-hidden="true"></p>
+      </article>
+    </div>
+
+    <!-- ScrollStory 3 组横向卡片（数据 → 品格 → 收尾） -->
+    <div id="scrollStoryCards" class="ssc" aria-hidden="true"></div>
+  </section>
+
+  <!-- Marquee 双行反向滚动（仅竖向 13 张作品；横向作品在下方单独展示） -->
+  <section class="marquee" id="marquee" aria-label="作品长卷">
+    <div class="marquee__track" id="marqueeRow1"></div>
+    <div class="marquee__track" id="marqueeRow2"></div>
+  </section>
+
+  <!-- 横向作品单独展示（id=4,6,13,16,17,19 共 6 张）：
+       横向作品在竖向长卷里显得矮胖、细节不清，因此脱离滚动机制，
+       改成静态网格直观展示 —— 6 张全部直接呈现，无需等待滚动。 -->
+  <section class="marquee-landscape" id="marqueeLandscape" aria-label="横幅作品">
+    <div class="marquee-landscape__eyebrow">横幅 · Landscape Frames</div>
+    <div class="landscape-grid" id="landscapeGrid"></div>
+  </section>
+
+  <!-- Story 艺术家故事 -->
+  <section class="story section--numbered" id="story" aria-label="艺术家故事">
+    <span class="chapter-number" aria-hidden="true">叁</span>
+    <div class="container">
+      <div class="story__grid">
+        <div class="story__media">
+          <img src="素材/20.jpg" alt="黄桂明" class="story__img" data-parallax="0.08">
+          <div class="story__seal">桂明</div>
+        </div>
+        <div>
+          <span class="eyebrow">艺术家 · The Artist</span>
+          <h2 class="story__title" data-ink-reveal>画品即人品，<br>诗情即画意。</h2>
+          <p class="story__text">
+            黄桂明，桂林山水画家。17 岁拜师学画，至今笔耕四十余年。
+            只画桂林山水，从未画过其他题材；一个景点可以画三、五、十张，每幅各有千秋，绝不重复。
+          </p>
+          <p class="story__text">
+            他是一位"没有"什么的画家——不是任何协会会员，没有入展获奖记录，没有炒作宣传，
+            没有出版过自己的画集。然而被艺术圈称为"黄桂明现象"，
+            不用找合作画廊，画廊老板却主动上门协商取货。
+          </p>
+          <p class="story__signature">— 黄桂明 · 桂林</p>
+          <div style="margin-top:48px;">
+            <a href="artist.html" class="btn btn--ghost-dark">了解更多 →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Verse 题画诗金句（由 ink-effects bootVerse 注入） -->
+  <section class="verse" id="verse" aria-label="题画诗">
+    <p class="verse__text"></p>
+    <p class="verse__author">— 黄桂明</p>
+  </section>
+
+  <!-- ScrollStory 浮层艺术家介绍（已移入 #scroll-story section 内） -->
+
+  <!-- Footer (由 lib/footer.js 注入) -->
+  <footer id="footer" aria-label="页脚"></footer>
+
+  <!-- Scripts（顺序：CDN/本地 vendor → 数据 → nav/footer → ink-effects） -->
+  <script src="lib/vendor/lenis.min.js?v=1" defer crossorigin="anonymous"
+          integrity="sha384-B2WBjDzEjJpYvhmi2UyEn7rektqkf5suS6sNoyyrf0EBAwBHdkiXxIlU0V5Ru2ed"
+          onerror="console.error('[index.html] lenis.min.js 加载失败')"></script>
+  <script src="lib/vendor/gsap.min.js?v=1" defer crossorigin="anonymous"
+          integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt"
+          onerror="console.error('[index.html] gsap.min.js 加载失败')"></script>
+  <script src="lib/vendor/ScrollTrigger.min.js?v=1" defer crossorigin="anonymous"
+          integrity="sha384-Z3REaz79l2IaAZqJsSABtTbhjgOUYyV3p90XNnAPCSHg3EMTz1fouunq9WZRtj3d"
+          onerror="console.error('[index.html] ScrollTrigger.min.js 加载失败')"></script>
+
+  <script src="lib/escape-html.js?v=20260730" defer></script>
+  <script src="lib/svg-defs.js?v=20260729" defer></script>
+  <script src="lib/artworks-data.js?v=20260729" defer></script>
+  <script src="lib/smooth-scroll.js?v=20260729" defer></script>
+  <script src="lib/nav.js?v=20260731e" defer></script>
+  <script src="lib/footer.js?v=20260731f" defer></script>
+  <script src="lib/image-fit.js?v=20260801a" defer></script>
+  <script src="lib/lightbox.js?v=20260803" defer></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', function(){
+      NAV_BOOT({ homepage: true });
+      FOOTER_BOOT();
+      LIGHT_RAYS_BOOT({
+        raysOrigin: 'top-center',          // 起点在 section 之外（y=-0.2h，跨过 nav）
+        raysColor: '#E0E8D0',              // 接近宣纸米（pale cream-green，letterbox 强烈可见）
+        raysSpeed: 1.5,
+        lightSpread: 2.0,                 // 很宽 — 覆盖 L/R letterbox
+        rayLength: 3.0,                   // 很长 — 光线覆盖整个 section
+        fadeDistance: 4.0,                // 渐隐距离很大，光线持久
+        saturation: 1.0,
+        followMouse: false,
+        mouseInfluence: 0.0,
+        noiseAmount: 0.0,                 // 干净 — 无噪点
+        distortion: 0.0                   // 笔直 — 无扭曲
+      });
+    });
+  </script>
+  <script src="lib/scroll-story-progress.js?v=20260730b" defer></script>
+  <script src="lib/scroll-story-cards-data.js?v=20260730b" defer></script>
+  <script src="lib/light-rays-background.js?v=20260803b" defer></script>
+  <script src="lib/scroll-story-cards.js?v=20260730b" defer></script>
+  <script src="lib/intro-overlay.js?v=20260730b" defer></script>
+  <script src="lib/marquee-row.js?v=20260731" defer></script>
+  <script src="ink-effects.js?v=20260731" defer></script>
+</body>
+</html>
