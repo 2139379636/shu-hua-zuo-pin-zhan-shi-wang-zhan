@@ -106,8 +106,8 @@ C. CloudFlare Pages
 -----------------
 
 1. 浏览器访问：
-   https://你的域名/admin.html?key=pzz040105AS
-   （默认口令 pzz040105AS，部署后必须改，见六、版本更新）
+   https://你的域名/admin.html?key=<您的管理员口令>
+   （默认口令 <您的管理员口令>，部署后必须改，见六、版本更新）
 
 2. 进入后找到 "GitHub 同步配置" 面板
 
@@ -142,7 +142,7 @@ C. CloudFlare Pages
 2.4 修改默认口令（强烈建议）
 ----------------------------
 编辑 lib/admin-config.js：
-  找到：window.HGM_ADMIN_KEY_HASH = '7124acf3a42b479cf04bb4b70d8752d60bc235470266e5aad6b8bbd7dd3ea9d4';
+  找到：window.HGM_ADMIN_KEY_HASH = '<您生成的新 hash>';
   替换为新口令的 sha256 hash
 
 生成新 hash 的方法（浏览器开发者工具 Console 执行）：
@@ -438,7 +438,7 @@ D. 关键文件路径速查
 - 项目根：C:\Users\17316\Desktop\网页8\
 - dev-server：python dev-server.py 8080 127.0.0.1
 - admin 入口：admin.html
-- 默认口令：pzz040105AS（部署后必须改）
+- 默认口令：<您的管理员口令>（部署后必须改）
 - Worker 文件：workers/github-cors-proxy.js
 - 数据文件：data/artworks.json
 - 作品素材目录：素材/{id}.jpg
@@ -760,7 +760,7 @@ D. 关键文件路径速查
 - 项目根：C:\Users\17316\Desktop\网页8\
 - dev-server：python dev-server.py 8080 127.0.0.1
 - admin 入口：admin.html
-- 默认口令：pzz040105AS（部署后必须改）
+- 默认口令：<您的管理员口令>（部署后必须改）
 - Worker 文件：workers/github-cors-proxy.js
 - 数据文件：data/artworks.json
 - 测试：python tests/smoke-test.py

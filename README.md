@@ -321,7 +321,7 @@ admin.html 保存
 
 ### 4. 首次配置 admin
 
-1. 访问部署后的 `https://your-domain/admin.html?key=pzz040105AS`
+1. 访问部署后的 `https://your-domain/admin.html?key=<您的管理员口令>`（口令请见密码管理器或本地部署文档）
 2. 在 **GitHub 同步配置** 面板填入：
    - **仓库**：`你的用户名/仓库名`
    - **分支**：`main`
