@@ -1,9 +1,9 @@
 name: 同步到七牛云
-on:
+  on:
     push:
       branches: [main]
     workflow_dispatch:
-jobs:
+  jobs:
     deploy:
       runs-on: ubuntu-latest
       permissions:
@@ -27,5 +27,4 @@ jobs:
         - name: 部署完成
           if: success()
           run: |
-            echo "✓ 部署成功，访问七牛云测试域名查看"
-            echo "默认域名格式：http://<bucket>.clouddn.com/"
+            echo "✓ 部署成功"
