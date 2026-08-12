@@ -1138,6 +1138,10 @@ p {
   /* 手机端隐藏管理入口 — 后台用桌面访问更合适；业主手机上误触也避免 */
   .footer__manage { display: none; }
   .footer__bottom { flex-direction: column; gap: var(--space-md); }
+  /* 手机端锁死 footer 可见 — 解决 rootMargin -10% 阻挡 + Quark 等国产浏览器
+     IntersectionObserver 不触发「加载时已在 viewport」元素的 bug，
+     避免底部功能区永久 opacity:0 看不见。桌面端保留淡入动画 */
+  .footer { opacity: 1 !important; transform: none !important; transition: none !important; }
 }
 
 /* ---------- Artwork Detail ---------- */
