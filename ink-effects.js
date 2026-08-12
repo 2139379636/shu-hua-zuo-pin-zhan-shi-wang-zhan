@@ -292,8 +292,13 @@
     window.addEventListener('resize', resizeCanvas);
     preloadAll();
 
-    // ====== 主方案：ScrollTrigger pin + scrub ======
-    if (cap.scrollStoryOK) {
+    // 触屏设备跳过 ScrollTrigger.pin — iOS/Android 上 pin + 触摸滚动兼容性差，
+    // 直接走下方 native scrub 兜底（已存在）。桌面端不受影响。
+    const isMobile = window.matchMedia('(hover: none), (pointer: coarse)').matches ||
+                     (navigator.maxTouchPoints > 0);
+
+    // ====== 主方案：ScrollTrigger pin + scrub (仅桌面) ======
+    if (cap.scrollStoryOK && !isMobile) {
       gsap.context(() => {
         ScrollTrigger.create({
           trigger: '#scroll-story',
@@ -357,7 +362,7 @@
       setTimeout(nativeScrub, 100);
     }
 
-    log('[ScrollStory] booted (ScrollTrigger + native scroll fallback)');
+    log('[ScrollStory] booted (ScrollTrigger + native scroll fallback)' + (isMobile ? ' [mobile path]' : ''));
   }
 
   // =================================================================
@@ -392,19 +397,25 @@
       return;
     }
 
+    // 触屏：动画速度降至 ~55%（px/s 在窄屏视觉感受更快，桌面不变）
+    const isMobile = window.matchMedia('(hover: none), (pointer: coarse)').matches ||
+                     (navigator.maxTouchPoints > 0);
+    const row1Speed = isMobile ? 30 : 55;
+    const row2Speed = isMobile ? 25 : 45;
+
     // 各自独立实例：自己的数据、自己的方向/速度、自己的 hover 监听
     // 速度用 px/s 表示（之前 CSS 是 60s/80s 滚动 50% ≈ 50-60px/s）
     window.createMarqueeRow({
       arts: row1Arts,
       container: row1,
       direction: 'left',
-      speed: 55,
+      speed: row1Speed,
     });
     window.createMarqueeRow({
       arts: row2Arts,
       container: row2,
       direction: 'right',
-      speed: 45,
+      speed: row2Speed,
     });
 
     log(`[Marquee] booted (row1=${row1Arts.length} + row2=${row2Arts.length} portrait tiles, independent components)`);

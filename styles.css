@@ -1135,8 +1135,8 @@ p {
 
 @media (max-width: 768px) {
   .footer__grid { grid-template-columns: 1fr 1fr; gap: var(--space-xl); }
-  /* 管理栏在窄屏独占一行（5 元素 → 第 5 个到第 6 个位置）；用 grid-column 全跨 */
-  .footer__manage { grid-column: 1 / -1; padding-top: var(--space-lg); border-top: 1px solid var(--color-divider); }
+  /* 手机端隐藏管理入口 — 后台用桌面访问更合适；业主手机上误触也避免 */
+  .footer__manage { display: none; }
   .footer__bottom { flex-direction: column; gap: var(--space-md); }
 }
 
@@ -1481,8 +1481,14 @@ button.marquee__tile:focus-visible {
 .marquee__tile:hover .marquee__seal { opacity: 1; }
 
 @media (max-width: 600px) {
-  .marquee__tile { flex-basis: 240px; }
-  .marquee-landscape .marquee__tile { flex-basis: 340px; }
+  /* 强制统一 tile 尺寸 — 每张图原始宽高比不同会导致 aspect-ratio
+     算出不同高度，同一行 tile 参差不齐。固定 220×280 让竖图居中显示
+     （object-fit: contain 保留原图比例，多余空间留白），行高统一。
+     桌面端 flex-basis + 动态 aspect-ratio 不变。 */
+  .marquee__tile { flex: 0 0 220px; height: 280px; }
+  .marquee-landscape .marquee__tile { flex: 0 0 280px; height: 180px; }
+  /* 拉宽 tile 间距 — 桌面 24px 在窄屏太挤，视觉上图片"贴"在一起 */
+  .marquee__track { gap: 40px; }
 }
 
 /* ===== Lightbox — 首页点击作品全屏展示 ===== */
