@@ -2091,49 +2091,63 @@ html {
   .intro-overlay__line      { font-size: clamp(16px, 4vw, 22px); }
 }
 
-/* ===== 手机端 ScrollStory 布局：扩大画布 + 文字移至顶部黑色留白区 =====
+/* ===== 手机端 ScrollStory 布局：画布扩到 95vw + 文字上下分布到黑色留白区 =====
    桌面端：画布 80vw + 文字竖排在左右 10vw letterbox 内（窄列题签）
-   手机端：画布扩到 92vw（剩余 4vw 侧边距放不下文字，文字改横排移到顶部留白区） */
+   手机端：画布 95vw + 文字 name 顶部、line 底部（上下黑色留白区），
+          不再覆盖画布；卡片纵向 flex（justify-content: space-between） */
 @media (max-width: 768px) {
-  /* 1. canvas 扩大 — 80vw → 92vw */
+  /* 1. canvas 扩大 — 80vw → 95vw（让画面更大、更不缺失） */
   .scroll-story__canvas {
-    width: 92vw;
-    height: calc(92vw * 9 / 16);
+    width: 95vw;
+    height: calc(95vw * 9 / 16);
   }
 
-  /* 2. intro overlay（黄桂明 + 题画诗）移至顶部留白区 — 横向文字，垂直居中堆叠 */
+  /* 2. intro overlay 铺满 viewport（position: fixed inset: 0 已经是），
+        让卡片可以上下分布文字到顶部 / 底部黑色留白区 */
   .intro-overlay {
-    padding: calc(var(--nav-height, 72px) + 4vw) 4vw 0 4vw;
-    flex-direction: column;
-    align-items: center;
+    padding: calc(var(--nav-height, 72px) + 6px) 4vw 6vh 4vw;
+    display: flex;
+    align-items: stretch;
     justify-content: flex-start;
-    gap: 6px;
   }
 
-  /* 3. 序幕卡片：横向 flex，文字横排 */
+  /* 3. 序幕卡片：纵向 flex，name 顶部 / line 底部（分布到上下黑色留白区） */
   .ssc__card--prologue {
-    padding: 0;
-    max-width: none;
+    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  /* 4. 文字横排（不再竖排） */
-  .intro-overlay__name,
-  .intro-overlay__line {
-    writing-mode: horizontal-tb;
-    text-orientation: mixed;
-    letter-spacing: 0.2em;
-    white-space: normal;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    max-width: none;
+    gap: 0;
+    flex-wrap: nowrap;
     text-align: center;
   }
-  .intro-overlay__name { font-size: 14px; margin: 0; }
-  .intro-overlay__line { font-size: 12px; color: rgba(245, 241, 232, 0.7); margin: 0; }
 
-  /* 5. 序幕印章 + 竖分隔线 — 移到顶部居中后会显得突兀，隐藏 */
+  /* 4. 覆盖全局 vertical-rl：与 .ssc__card--prologue .intro-overlay__name 同特异性，
+        后面规则胜出。文字改为横排 */
+  .ssc__card--prologue .intro-overlay__name,
+  .ssc__card--prologue .intro-overlay__line {
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+    letter-spacing: 0.2em !important;
+    white-space: normal !important;
+    text-align: center;
+    margin: 0;
+  }
+  .ssc__card--prologue .intro-overlay__name {
+    font-size: 13px !important;
+    color: rgba(245, 241, 232, 0.9);
+  }
+  .ssc__card--prologue .intro-overlay__line {
+    font-size: 11px !important;
+    color: rgba(245, 241, 232, 0.65);
+    line-height: 1.6;
+  }
+
+  /* 5. 序幕印章 + 竖分隔线 — 移到上下分布后会显得突兀，隐藏 */
   .ssc__card--prologue .ssc__rule,
   .intro-overlay__rule-vertical {
     display: none;
