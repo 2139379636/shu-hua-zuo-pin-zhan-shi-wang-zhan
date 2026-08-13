@@ -22,6 +22,10 @@ async def main():
                         wait_until='domcontentloaded', timeout=60000)
         await page.wait_for_timeout(3000)
 
+        # Dismiss portrait-hint（竖屏横屏提示）—— 它覆盖整个 viewport，不关掉会挡住 marquee 的 touch
+        await page.evaluate("document.getElementById('portraitHintClose')?.click()")
+        await page.wait_for_timeout(500)
+
         # 滚到 marquee
         await page.evaluate("document.getElementById('marquee').scrollIntoView({behavior:'instant', block:'center'})")
         await page.wait_for_timeout(2500)
@@ -108,6 +112,9 @@ async def test_slide_down_no_trigger():
         await page.goto('http://127.0.0.1:8080/index.html',
                         wait_until='domcontentloaded', timeout=60000)
         await page.wait_for_timeout(3000)
+        # Dismiss portrait-hint（竖屏横屏提示）—— 它覆盖整个 viewport，不关掉会挡住 marquee 的 touch
+        await page.evaluate("document.getElementById('portraitHintClose')?.click()")
+        await page.wait_for_timeout(500)
         await page.evaluate("document.getElementById('marquee').scrollIntoView({behavior:'instant', block:'center'})")
         await page.wait_for_timeout(2500)
 
@@ -201,6 +208,9 @@ async def test_synth_mousedown_blocked():
         await page.goto('http://127.0.0.1:8080/index.html',
                         wait_until='domcontentloaded', timeout=60000)
         await page.wait_for_timeout(3000)
+        # Dismiss portrait-hint（竖屏横屏提示）—— 它覆盖整个 viewport，不关掉会挡住 marquee 的 touch
+        await page.evaluate("document.getElementById('portraitHintClose')?.click()")
+        await page.wait_for_timeout(500)
         await page.evaluate("document.getElementById('marquee').scrollIntoView({behavior:'instant', block:'center'})")
         await page.wait_for_timeout(2500)
 
@@ -273,6 +283,9 @@ async def test_long_press_no_trigger():
         await page.goto('http://127.0.0.1:8080/index.html',
                         wait_until='domcontentloaded', timeout=60000)
         await page.wait_for_timeout(3000)
+        # Dismiss portrait-hint（竖屏横屏提示）—— 它覆盖整个 viewport，不关掉会挡住 marquee 的 touch
+        await page.evaluate("document.getElementById('portraitHintClose')?.click()")
+        await page.wait_for_timeout(500)
         await page.evaluate("document.getElementById('marquee').scrollIntoView({behavior:'instant', block:'center'})")
         await page.wait_for_timeout(2500)
 
@@ -354,6 +367,9 @@ async def test_horizontal_slide_no_trigger():
         await page.goto('http://127.0.0.1:8080/index.html',
                         wait_until='domcontentloaded', timeout=60000)
         await page.wait_for_timeout(3000)
+        # Dismiss portrait-hint（竖屏横屏提示）—— 它覆盖整个 viewport，不关掉会挡住 marquee 的 touch
+        await page.evaluate("document.getElementById('portraitHintClose')?.click()")
+        await page.wait_for_timeout(500)
         await page.evaluate("document.getElementById('marquee').scrollIntoView({behavior:'instant', block:'center'})")
         await page.wait_for_timeout(2500)
 
