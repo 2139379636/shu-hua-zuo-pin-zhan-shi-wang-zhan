@@ -2119,11 +2119,11 @@ html {
   }
 
   /* 4. 序幕卡片：纵向 flex，name 顶部 / line 底部（错开中间画作），
-        整体水平靠右（align-items: flex-end） */
+        整体水平居中（落在 T/B 黑色留白区水平中线） */
   .ssc__card--prologue {
     flex-direction: column;
     justify-content: space-between;
-    align-items: flex-end;       /* 文字列整体贴右缘 */
+    align-items: center;         /* 文字列整体水平居中，不贴右缘也不贴左缘 */
     width: 100%;
     height: 100%;
     padding: 0;
