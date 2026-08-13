@@ -177,7 +177,169 @@ async def test_slide_down_no_trigger():
         await browser.close()
 
 
+async def test_synth_mousedown_blocked():
+    """验证触屏后浏览器合成的 mousedown 不会再次触发 lightbox。
+
+    之前 bug：touchend 打开 lightbox 后，浏览器紧跟合成 mousedown，
+    onMouseDown 又打开一次 → 用户感知"按下就触发"。
+
+    修复：touchstart 设 blockMouseUntil = now + 700ms，合成 mousedown
+    在 700ms 窗口内被跳过。
+
+    验证：包装 HGM_LIGHTBOX.open 计数器，单次触屏后 open 应被调用恰好 1 次。
+    """
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        context = await browser.new_context(
+            viewport={'width': 390, 'height': 844},
+            device_scale_factor=3,
+            is_mobile=True,
+            has_touch=True,
+        )
+        page = await context.new_page()
+
+        await page.goto('http://127.0.0.1:8080/index.html',
+                        wait_until='domcontentloaded', timeout=60000)
+        await page.wait_for_timeout(3000)
+        await page.evaluate("document.getElementById('marquee').scrollIntoView({behavior:'instant', block:'center'})")
+        await page.wait_for_timeout(2500)
+
+        # 装计数器：包一层 HGM_LIGHTBOX.open
+        await page.evaluate("""() => {
+            window.__openCount = 0;
+            const orig = window.HGM_LIGHTBOX.open;
+            window.HGM_LIGHTBOX.open = function(...args){
+                window.__openCount++;
+                return orig.apply(this, args);
+            };
+        }""")
+
+        # 直接用 page.touchscreen.tap — 真实触屏路径，浏览器会合成 mousedown
+        tile = await page.evaluate("""() => {
+            const tiles = Array.from(document.querySelectorAll('.marquee__track .marquee__tile'));
+            const vh = window.innerHeight;
+            for (const t of tiles) {
+              const r = t.getBoundingClientRect();
+              const cx = r.left + r.width/2, cy = r.top + r.height/2;
+              if (cy > 0 && cy < vh && cx > 0 && cx < 390) {
+                return { id: t.dataset.id, cx, cy };
+              }
+            }
+            return null;
+        }""")
+
+        if not tile:
+            print('[FAIL] 视口内没找到 tile')
+            await browser.close()
+            return
+
+        cx, cy = int(tile['cx']), int(tile['cy'])
+        print(f'[synth-block] target tile id={tile["id"]} center=({cx},{cy})')
+
+        await page.touchscreen.tap(cx, cy)
+        # 等候超过 700ms 窗口（让任何未拦截的合成 mousedown 都被消化）
+        await page.wait_for_timeout(1000)
+
+        open_count = await page.evaluate("window.__openCount")
+        is_open = await page.evaluate("document.getElementById('hgmLightbox')?.classList.contains('is-open')")
+
+        print('=' * 70)
+        if open_count == 1 and is_open:
+            print(f'[PASS] 触屏只调用 open() 1 次，合成 mousedown 被拦截（tile={tile["id"]}）')
+        elif open_count > 1:
+            print(f'[FAIL] 触屏调了 open() {open_count} 次，合成 mousedown 没拦住')
+        else:
+            print(f'[FAIL] open() 调用 {open_count} 次，lightbox open={is_open}')
+
+        await browser.close()
+
+
+async def test_long_press_no_trigger():
+    """验证长按（≥500ms）后松手不触发 lightbox。
+
+    设计意图：用户的"长按"通常是误触 / 想看 OS 原生菜单（保存图片 / 复制），
+    不应该打开 lightbox。
+    """
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        context = await browser.new_context(
+            viewport={'width': 390, 'height': 844},
+            device_scale_factor=3,
+            is_mobile=True,
+            has_touch=True,
+        )
+        page = await context.new_page()
+
+        await page.goto('http://127.0.0.1:8080/index.html',
+                        wait_until='domcontentloaded', timeout=60000)
+        await page.wait_for_timeout(3000)
+        await page.evaluate("document.getElementById('marquee').scrollIntoView({behavior:'instant', block:'center'})")
+        await page.wait_for_timeout(2500)
+
+        tile = await page.evaluate("""() => {
+            const tiles = Array.from(document.querySelectorAll('.marquee__track .marquee__tile'));
+            const vh = window.innerHeight;
+            for (const t of tiles) {
+              const r = t.getBoundingClientRect();
+              const cx = r.left + r.width/2, cy = r.top + r.height/2;
+              if (cy > 0 && cy < vh && cx > 0 && cx < 390) {
+                return { id: t.dataset.id, cx, cy };
+              }
+            }
+            return null;
+        }""")
+
+        if not tile:
+            print('[FAIL] 视口内没找到 tile')
+            await browser.close()
+            return
+
+        cx, cy = int(tile['cx']), int(tile['cy'])
+        print(f'[long-press] target tile id={tile["id"]} center=({cx},{cy})')
+
+        # 手动模拟 touchstart，等 700ms（>500ms 阈值），再 touchend
+        result = await page.evaluate("""async ({cx, cy}) => {
+            const tileEl = document.elementFromPoint(cx, cy);
+            if (!tileEl) return 'no-tile-at-point';
+            const targetTile = tileEl.closest('.marquee__tile') || tileEl;
+
+            function mkTouch(x, y, target){
+                return new Touch({ identifier: 0, target, clientX: x, clientY: y,
+                                   pageX: x, pageY: y, screenX: x, screenY: y, radiusX: 1, radiusY: 1, force: 1 });
+            }
+            const t0 = mkTouch(cx, cy, targetTile);
+            targetTile.dispatchEvent(new TouchEvent('touchstart', {
+              touches: [t0], targetTouches: [t0], changedTouches: [t0],
+              cancelable: true, bubbles: true
+            }));
+            // 等待 700ms（> LONG_PRESS_MS 500）
+            await new Promise(r => setTimeout(r, 700));
+            targetTile.dispatchEvent(new TouchEvent('touchend', {
+              touches: [], targetTouches: [], changedTouches: [t0],
+              cancelable: true, bubbles: true
+            }));
+            return 'dispatched';
+        }""", {'cx': cx, 'cy': cy})
+
+        print(f'[long-press] gesture: {result}')
+        await page.wait_for_timeout(500)
+
+        is_open = await page.evaluate("document.getElementById('hgmLightbox')?.classList.contains('is-open')")
+
+        print('=' * 70)
+        if not is_open:
+            print(f'[PASS] 长按 700ms 后松手未触发 lightbox（tile={tile["id"]}）')
+        else:
+            print(f'[FAIL] 长按后松手触发了 lightbox')
+
+        await browser.close()
+
+
 if __name__ == '__main__':
     asyncio.run(main())
     print()
     asyncio.run(test_slide_down_no_trigger())
+    print()
+    asyncio.run(test_synth_mousedown_blocked())
+    print()
+    asyncio.run(test_long_press_no_trigger())
