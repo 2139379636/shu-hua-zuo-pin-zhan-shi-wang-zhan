@@ -237,6 +237,9 @@
             }
             drawFrame(0);
           }
+          // v20260814 — 更新全局帧计数，让 bootLoader 准确计算进度
+          window.SCROLL_STORY_LOADED_FRAMES = loadedCount;
+          window.SCROLL_STORY_FRAME_COUNT = actualFrameCount;
           const loaderBar = document.getElementById('loaderBar');
           const loaderCount = document.getElementById('loaderCount');
           if (loaderBar) loaderBar.style.width = Math.min(100, Math.round((loadedCount / actualFrameCount) * 100)) + '%';
@@ -269,13 +272,7 @@
       // 导致 GSAP 分支首屏仍处于 opacity: 0，用户看到的是空白）
       scrollStory.classList.add('is-active');
 
-      // 关 loader（不等所有帧）
-      const loaderEl = document.getElementById('loader');
-      if (loaderEl) {
-        loaderEl.classList.add('is-hiding');
-        document.body.classList.add('is-ready');
-        setTimeout(() => loaderEl.classList.add('is-removed'), 600);
-      }
+      // v20260814 — 移除"关 loader"逻辑，统一由 bootLoader 控制进度和关闭时机
 
       // 后台异步加载其余帧（不阻塞 UI）
       setTimeout(async () => {
@@ -646,28 +643,104 @@
   }
 
   // =================================================================
-  // 模块 F: Loader (Task 15)
+  // 模块 F: Loader (Task 15) — 准确进度条版本
+  // 进度条追踪：
+  //   · Hero 两张大图（留白.png + 有画.png）— 首屏必需
+  //   · ScrollStory 前 30 帧 — 首屏第一帧可见
+  //   · Google Fonts — 文字字体
+  //   · GSAP — 滚动动画
+  // 全部加载完才关闭 loader
   // =================================================================
   function bootLoader(){
     const loaderEl = document.getElementById('loader');
     if (!loaderEl) return;
-
     if (loaderEl.classList.contains('is-removed')) return;
 
+    const bar = document.getElementById('loaderBar');
+    const count = document.getElementById('loaderCount');
+
     function ready(){
+      if (loaderEl.classList.contains('is-removed')) return;
+      // 确保进度条显示 100% 后再关闭（视觉一致性）
+      if (bar) bar.style.width = '100%';
+      if (count) count.textContent = '100';
       loaderEl.classList.add('is-hiding');
       document.body.classList.add('is-ready');
-      setTimeout(() => loaderEl.classList.add('is-removed'), 1000);
+      setTimeout(() => loaderEl.classList.add('is-removed'), 600);
       log('[Loader] hidden');
     }
 
-    // 策略：GSAP 加载完后立即 ready，不需预加载 598 张图
-    if (cap.Gsap) {
-      setTimeout(ready, 600);
-    } else {
-      if (document.readyState === 'complete') setTimeout(ready, 600);
-      else window.addEventListener('load', () => setTimeout(ready, 600));
+    // 资源队列：每个资源有 weight（贡献到总进度）
+    const resources = [];
+
+    // 1. Hero 两张大图（高权重）
+    document.querySelectorAll('.hero__layer').forEach(img => {
+      resources.push({ el: img, weight: 30, name: 'hero:' + (img.alt || '?').slice(0, 20) });
+    });
+
+    // 2. ScrollStory 前 30 帧（首屏必需 — 与 ScrollStory 的 PRIORITY 一致）
+    const FRAME_TOTAL = 30;
+    resources.push({
+      type: 'scrollstory-frames',
+      weight: 30,
+      name: 'scrollstory frames',
+    });
+
+    // 3. Google Fonts（中权重）
+    resources.push({
+      type: 'fonts',
+      weight: 10,
+      name: 'google-fonts',
+    });
+
+    function isFontLoaded(){
+      // document.fonts.ready 是 Promise
+      return !document.fonts || document.fonts.status === 'loaded';
     }
+
+    function update(){
+      let loaded = 0;
+      let total = 0;
+      for (let i = 0; i < resources.length; i++){
+        const r = resources[i];
+        total += r.weight;
+        if (r.el) {
+          // 图片资源
+          if (r.el.complete && r.el.naturalWidth > 0) loaded += r.weight;
+        } else if (r.type === 'fonts') {
+          // 字体资源
+          if (isFontLoaded()) loaded += r.weight;
+        } else if (r.type === 'scrollstory-frames') {
+          // ScrollStory 帧：按已加载/30 计算（30 帧为首屏必需）
+          const frameLoaded = window.SCROLL_STORY_LOADED_FRAMES || 0;
+          const ratio = Math.min(1, frameLoaded / FRAME_TOTAL);
+          loaded += r.weight * ratio;
+        }
+      }
+      const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
+      if (bar) bar.style.width = pct + '%';
+      if (count) count.textContent = String(pct);
+      return pct;
+    }
+
+    // 初始更新一次（让用户看到 0%）
+    update();
+
+    // 每 100ms 更新进度
+    const tickId = setInterval(() => {
+      const pct = update();
+      if (pct >= 100) {
+        clearInterval(tickId);
+        setTimeout(ready, 200);  // 100% 显示 200ms 后关闭
+      }
+    }, 100);
+
+    // 兜底：15 秒强制关闭（防止网络异常永久 loading）
+    setTimeout(() => {
+      clearInterval(tickId);
+      log('[Loader] timeout fallback');
+      ready();
+    }, 15000);
   }
 
   // =================================================================
