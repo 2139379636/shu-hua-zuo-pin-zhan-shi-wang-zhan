@@ -2091,10 +2091,10 @@ html {
   .intro-overlay__line      { font-size: clamp(16px, 4vw, 22px); }
 }
 
-/* ===== 手机端 ScrollStory 布局：画布扩到 95vw + 文字上下分布到黑色留白区 =====
-   桌面端：画布 80vw + 文字竖排在左右 10vw letterbox 内（窄列题签）
-   手机端：画布 95vw + 文字 name 顶部、line 底部（上下黑色留白区），
-          不再覆盖画布；卡片纵向 flex（justify-content: space-between） */
+/* ===== 手机端 ScrollStory 布局：竖排文字 + 左右缘分布（v 豆包建议） =====
+   桌面端：画布 80vw + 文字竖排在左右 10vw letterbox 内（窄列题签）— 不动
+   手机端：画布 95vw + 文字保持桌面端的竖排样式（writing-mode: vertical-rl），
+          name 贴左缘、line 贴右缘，列高允许延伸到上下黑色 letterbox 区 */
 @media (max-width: 768px) {
   /* 1. canvas 扩大 — 80vw → 95vw（让画面更大、更不缺失） */
   .scroll-story__canvas {
@@ -2102,20 +2102,26 @@ html {
     height: calc(95vw * 9 / 16);
   }
 
-  /* 2. intro overlay 铺满 viewport（position: fixed inset: 0 已经是），
-        让卡片可以上下分布文字到顶部 / 底部黑色留白区 */
+  /* 2. 滚动故事区允许溢出（竖排文字可延伸到上下黑色 letterbox 区不被裁剪） */
+  .scroll-story {
+    overflow: visible;
+  }
+
+  /* 3. intro overlay 铺满 viewport（position: fixed inset: 0 已经是），
+        允许文字超出 viewport 高度延伸到上下黑色留白区 */
   .intro-overlay {
     padding: calc(var(--nav-height, 72px) + 6px) 4vw 6vh 4vw;
     display: flex;
     align-items: stretch;
     justify-content: flex-start;
+    overflow: visible;
   }
 
-  /* 3. 序幕卡片：纵向 flex，name 顶部 / line 底部（分布到上下黑色留白区） */
+  /* 4. 序幕卡片：横向 flex，name 左缘 / line 右缘（避开中央画作主体） */
   .ssc__card--prologue {
-    flex-direction: column;
+    flex-direction: row;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     width: 100%;
     height: 100%;
     padding: 0;
@@ -2123,37 +2129,37 @@ html {
     max-width: none;
     gap: 0;
     flex-wrap: nowrap;
-    text-align: center;
+    text-align: start;
   }
 
-  /* 4. 覆盖全局 vertical-rl：与 .ssc__card--prologue .intro-overlay__name 同特异性，
-        后面规则胜出。文字改为横排 */
+  /* 5. 保留桌面端的竖排书写模式（vertical-rl + upright + nowrap），
+        不再强制改为横排。字号让后续 clamp 块（2178 行）覆盖。 */
   .ssc__card--prologue .intro-overlay__name,
   .ssc__card--prologue .intro-overlay__line {
-    writing-mode: horizontal-tb !important;
-    text-orientation: mixed !important;
-    letter-spacing: 0.2em !important;
-    white-space: normal !important;
-    text-align: center;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    letter-spacing: 0.3em;
+    white-space: nowrap;
+    text-align: start;
     margin: 0;
+    /* 列高放开，让竖排文字可延伸到上下黑色 letterbox 区 */
+    max-height: none;
   }
   .ssc__card--prologue .intro-overlay__name {
-    font-size: 13px !important;
     color: rgba(245, 241, 232, 0.9);
   }
   .ssc__card--prologue .intro-overlay__line {
-    font-size: 11px !important;
     color: rgba(245, 241, 232, 0.65);
     line-height: 1.6;
   }
 
-  /* 5. 序幕印章 + 竖分隔线 — 移到上下分布后会显得突兀，隐藏 */
+  /* 6. 序幕印章 + 竖分隔线 — 横排布局下显示突兀，隐藏 */
   .ssc__card--prologue .ssc__rule,
   .intro-overlay__rule-vertical {
     display: none;
   }
 
-  /* 6. 3 组数据卡（侧边 2.6vw 极窄竖排 + 右侧 4vw 留白放不下文字）— 隐藏 */
+  /* 7. 3 组数据卡（侧边 2.6vw 极窄竖排 + 右侧 4vw 留白放不下文字）— 隐藏 */
   .ssc__group { display: none; }
 }
 
