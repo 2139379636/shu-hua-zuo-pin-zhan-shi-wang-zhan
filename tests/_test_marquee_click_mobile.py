@@ -335,6 +335,91 @@ async def test_long_press_no_trigger():
         await browser.close()
 
 
+async def test_horizontal_slide_no_trigger():
+    """验证横向滑动（≥10px）不触发 lightbox。
+
+    横向滑动在 marquee 组件里是"无意义"动作（marquee 自动滚动，不接受用户控制），
+    但用户可能误触，所以横移超阈值也按滚动意图处理，不开 lightbox。
+    """
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        context = await browser.new_context(
+            viewport={'width': 390, 'height': 844},
+            device_scale_factor=3,
+            is_mobile=True,
+            has_touch=True,
+        )
+        page = await context.new_page()
+
+        await page.goto('http://127.0.0.1:8080/index.html',
+                        wait_until='domcontentloaded', timeout=60000)
+        await page.wait_for_timeout(3000)
+        await page.evaluate("document.getElementById('marquee').scrollIntoView({behavior:'instant', block:'center'})")
+        await page.wait_for_timeout(2500)
+
+        tile = await page.evaluate("""() => {
+            const tiles = Array.from(document.querySelectorAll('.marquee__track .marquee__tile'));
+            const vh = window.innerHeight;
+            for (const t of tiles) {
+              const r = t.getBoundingClientRect();
+              const cx = r.left + r.width/2, cy = r.top + r.height/2;
+              if (cy > 0 && cy < vh && cx > 0 && cx < 390) {
+                return { id: t.dataset.id, cx, cy };
+              }
+            }
+            return null;
+        }""")
+
+        if not tile:
+            print('[FAIL] 视口内没找到 tile')
+            await browser.close()
+            return
+
+        cx, cy = int(tile['cx']), int(tile['cy'])
+        print(f'[h-slide] target tile id={tile["id"]} center=({cx},{cy})')
+
+        # 模拟横向滑动：start → move 右移 30px → end
+        moved = await page.evaluate("""({cx, cy}) => {
+            const tileEl = document.elementFromPoint(cx, cy);
+            if (!tileEl) return 'no-tile-at-point';
+            const targetTile = tileEl.closest('.marquee__tile') || tileEl;
+
+            function mkTouch(x, y, target){
+                return new Touch({ identifier: 0, target, clientX: x, clientY: y,
+                                   pageX: x, pageY: y, screenX: x, screenY: y, radiusX: 1, radiusY: 1, force: 1 });
+            }
+            const t0 = mkTouch(cx, cy, targetTile);
+            targetTile.dispatchEvent(new TouchEvent('touchstart', {
+              touches: [t0], targetTouches: [t0], changedTouches: [t0],
+              cancelable: true, bubbles: true
+            }));
+            // 横移 30px（> 阈值 10）
+            const t1 = mkTouch(cx + 30, cy, targetTile);
+            targetTile.dispatchEvent(new TouchEvent('touchmove', {
+              touches: [t1], targetTouches: [t1], changedTouches: [t1],
+              cancelable: true, bubbles: true
+            }));
+            targetTile.dispatchEvent(new TouchEvent('touchend', {
+              touches: [], targetTouches: [], changedTouches: [t1],
+              cancelable: true, bubbles: true
+            }));
+            return 'dispatched';
+        }""", {'cx': cx, 'cy': cy})
+
+        print(f'[h-slide] gesture: {moved}')
+        await page.wait_for_timeout(500)
+
+        is_open = await page.evaluate("document.getElementById('hgmLightbox')?.classList.contains('is-open')")
+
+        print('=' * 70)
+        if not is_open:
+            print(f'[PASS] 横向滑动 30px 未触发 lightbox（tile={tile["id"]}）')
+        else:
+            print(f'[FAIL] 横向滑动触发了 lightbox')
+
+        await browser.close()
+
+
 if __name__ == '__main__':
     asyncio.run(main())
     print()
@@ -343,3 +428,5 @@ if __name__ == '__main__':
     asyncio.run(test_synth_mousedown_blocked())
     print()
     asyncio.run(test_long_press_no_trigger())
+    print()
+    asyncio.run(test_horizontal_slide_no_trigger())
