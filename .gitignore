@@ -41,6 +41,7 @@ tests/_verify_*.py.bak
 tests/_debug_*.py.bak
 tests/_audit_*.py
 tests/_final_*.py
+tests/_debug_*.py
 tests/_debug_*.png
 tests/_final_*.png
 tests/_capture_*.py
