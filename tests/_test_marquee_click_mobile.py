@@ -6,7 +6,7 @@ import asyncio
 from playwright.async_api import async_playwright
 
 
-async def main():
+async def test_tap_no_mismatch():
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         # iPhone 12 viewport
@@ -437,7 +437,7 @@ async def test_horizontal_slide_no_trigger():
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    asyncio.run(test_tap_no_mismatch())
     print()
     asyncio.run(test_slide_down_no_trigger())
     print()
