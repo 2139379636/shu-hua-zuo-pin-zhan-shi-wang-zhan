@@ -436,6 +436,66 @@ async def test_horizontal_slide_no_trigger():
         await browser.close()
 
 
+async def test_slide_up_no_trigger():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        context = await browser.new_context(
+            viewport={'width': 390, 'height': 844},
+            device_scale_factor=3,
+            is_mobile=True,
+            has_touch=True,
+        )
+        page = await context.new_page()
+        await page.goto('http://127.0.0.1:8080/index.html',
+                        wait_until='domcontentloaded', timeout=60000)
+        await page.wait_for_timeout(3000)
+        await page.evaluate("document.getElementById('portraitHintClose')?.click()")
+        await page.wait_for_timeout(500)
+        await page.evaluate("document.getElementById('marquee').scrollIntoView({behavior:'instant', block:'center'})")
+        await page.wait_for_timeout(2500)
+
+        tile = await page.evaluate("""() => {
+            const tiles = Array.from(document.querySelectorAll('.marquee__track .marquee__tile'));
+            const vh = window.innerHeight;
+            for (const t of tiles) {
+              const r = t.getBoundingClientRect();
+              const cx = r.left + r.width/2, cy = r.top + r.height/2;
+              if (cy > 0 && cy < vh && cx > 0 && cx < 390) {
+                return { id: t.dataset.id, cx, cy };
+              }
+            }
+            return null;
+        }""")
+        if not tile:
+            print('[FAIL] 视口内没找到 tile')
+            await browser.close()
+            return
+        cx, cy = int(tile['cx']), int(tile['cy'])
+        print(f'[slide-up] target tile id={tile["id"]} center=({cx},{cy})')
+
+        await page.evaluate("""({cx, cy}) => {
+            const tileEl = document.elementFromPoint(cx, cy);
+            const targetTile = tileEl?.closest('.marquee__tile') || tileEl;
+            function mkTouch(x, y, target){
+                return new Touch({identifier:0,target,clientX:x,clientY:y,pageX:x,pageY:y,screenX:x,screenY:y,radiusX:1,radiusY:1,force:1});
+            }
+            const t0 = mkTouch(cx, cy, targetTile);
+            targetTile.dispatchEvent(new TouchEvent('touchstart', {touches:[t0],targetTouches:[t0],changedTouches:[t0],cancelable:true,bubbles:true}));
+            // 上滑 30px
+            const t1 = mkTouch(cx, cy - 30, targetTile);
+            targetTile.dispatchEvent(new TouchEvent('touchmove', {touches:[t1],targetTouches:[t1],changedTouches:[t1],cancelable:true,bubbles:true}));
+            targetTile.dispatchEvent(new TouchEvent('touchend', {touches:[],targetTouches:[],changedTouches:[t1],cancelable:true,bubbles:true}));
+        }""", {'cx': cx, 'cy': cy})
+        await page.wait_for_timeout(500)
+        is_open = await page.evaluate("document.getElementById('hgmLightbox')?.classList.contains('is-open')")
+        print('=' * 70)
+        if not is_open:
+            print(f'[PASS] 手指上滑 30px 未触发 lightbox（tile={tile["id"]}）')
+        else:
+            print(f'[FAIL] 手指上滑触发了 lightbox')
+        await browser.close()
+
+
 if __name__ == '__main__':
     asyncio.run(test_tap_no_mismatch())
     print()
@@ -446,3 +506,5 @@ if __name__ == '__main__':
     asyncio.run(test_long_press_no_trigger())
     print()
     asyncio.run(test_horizontal_slide_no_trigger())
+    print()
+    asyncio.run(test_slide_up_no_trigger())

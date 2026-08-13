@@ -2546,6 +2546,7 @@ html {
   -webkit-backdrop-filter: blur(8px);
   animation: portrait-hint-fade-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
   transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;           /* 背景不挡触摸 —— 唯 close 按钮可点 */
 }
 
 /* 关闭状态：淡出 + 缩小 + 不可点击 */
@@ -2586,6 +2587,7 @@ html {
   transition: all var(--duration-fast, 200ms) cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;            /* 覆盖父级 .portrait-hint 的 none */
 }
 
 .portrait-hint__close svg {
