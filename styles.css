@@ -2091,10 +2091,11 @@ html {
   .intro-overlay__line      { font-size: clamp(16px, 4vw, 22px); }
 }
 
-/* ===== 手机端 ScrollStory 布局：竖排文字 + 左右缘分布（v 豆包建议） =====
+/* ===== 手机端 ScrollStory 布局：竖排文字上下分布 + 水平靠右（v 豆包建议） =====
    桌面端：画布 80vw + 文字竖排在左右 10vw letterbox 内（窄列题签）— 不动
-   手机端：画布 95vw + 文字保持桌面端的竖排样式（writing-mode: vertical-rl），
-          name 贴左缘、line 贴右缘，列高允许延伸到上下黑色 letterbox 区 */
+   手机端：画布 95vw + 竖排文字保持原样（vertical-rl + upright + nowrap），
+          name 整段放【国画上方黑色留白区】，line 整段放【国画下方黑色留白区】，
+          整体水平靠右避免压中央画作；溢出允许延伸到 letterbox */
 @media (max-width: 768px) {
   /* 1. canvas 扩大 — 80vw → 95vw（让画面更大、更不缺失） */
   .scroll-story__canvas {
@@ -2117,11 +2118,12 @@ html {
     overflow: visible;
   }
 
-  /* 4. 序幕卡片：横向 flex，name 左缘 / line 右缘（避开中央画作主体） */
+  /* 4. 序幕卡片：纵向 flex，name 顶部 / line 底部（错开中间画作），
+        整体水平靠右（align-items: flex-end） */
   .ssc__card--prologue {
-    flex-direction: row;
+    flex-direction: column;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: flex-end;       /* 文字列整体贴右缘 */
     width: 100%;
     height: 100%;
     padding: 0;
@@ -2132,8 +2134,8 @@ html {
     text-align: start;
   }
 
-  /* 5. 保留桌面端的竖排书写模式（vertical-rl + upright + nowrap），
-        不再强制改为横排。字号让后续 clamp 块（2178 行）覆盖。 */
+  /* 5. 保留桌面端竖排书写（vertical-rl + upright + nowrap）；
+        缩小字号 + 行高压缩，让两列能放进上下 letterbox 区不互相重叠 */
   .ssc__card--prologue .intro-overlay__name,
   .ssc__card--prologue .intro-overlay__line {
     writing-mode: vertical-rl;
@@ -2142,18 +2144,21 @@ html {
     white-space: nowrap;
     text-align: start;
     margin: 0;
-    /* 列高放开，让竖排文字可延伸到上下黑色 letterbox 区 */
     max-height: none;
+    line-height: 1.5;
   }
   .ssc__card--prologue .intro-overlay__name {
+    /* name 8 字（黄桂明 · 桂林山水），clamp 适配不同手机高度 */
+    font-size: clamp(14px, 3.4vh, 18px) !important;
     color: rgba(245, 241, 232, 0.9);
   }
   .ssc__card--prologue .intro-overlay__line {
+    /* line 16 字（清江一曲绕山流 · 江岸奇峰耸），字号更小以放下 letterbox */
+    font-size: clamp(10px, 2.2vh, 13px) !important;
     color: rgba(245, 241, 232, 0.65);
-    line-height: 1.6;
   }
 
-  /* 6. 序幕印章 + 竖分隔线 — 横排布局下显示突兀，隐藏 */
+  /* 6. 序幕印章 + 竖分隔线 — 上下分布下显得突兀，隐藏 */
   .ssc__card--prologue .ssc__rule,
   .intro-overlay__rule-vertical {
     display: none;
