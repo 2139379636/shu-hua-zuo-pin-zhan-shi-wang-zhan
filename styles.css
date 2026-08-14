@@ -1086,6 +1086,19 @@ section[id], div[id] {
   flex-wrap: wrap;
 }
 
+/* 移动端适配：按钮垂直堆叠 + 占满容器宽度（触屏友好） */
+@media (max-width: 768px) {
+  .story__cta {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .story__cta .btn {
+    justify-content: center;
+  }
+}
+
 .btn--primary {
   background: var(--color-seal);
   color: var(--color-paper);
