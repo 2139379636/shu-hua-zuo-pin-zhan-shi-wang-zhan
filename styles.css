@@ -1078,6 +1078,14 @@ section[id], div[id] {
   border: 1px solid transparent;
 }
 
+/* Story 章节底部 CTA 按钮组（两个并排，移动端自动换行） */
+.story__cta {
+  margin-top: 48px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .btn--primary {
   background: var(--color-seal);
   color: var(--color-paper);
