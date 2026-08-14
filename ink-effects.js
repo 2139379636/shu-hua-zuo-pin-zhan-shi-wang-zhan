@@ -664,9 +664,10 @@
       // 确保进度条显示 100% 后再关闭（视觉一致性）
       if (bar) bar.style.width = '100%';
       if (count) count.textContent = '100';
-      loaderEl.classList.add('is-hiding');
+      // 直接 is-removed（display:none），跳过 is-hiding 中转过渡 + 600ms 等待，
+      // 满足"网页准备好后立刻进入"的预期。
+      loaderEl.classList.add('is-removed');
       document.body.classList.add('is-ready');
-      setTimeout(() => loaderEl.classList.add('is-removed'), 600);
       log('[Loader] hidden');
     }
 
@@ -731,7 +732,7 @@
       const pct = update();
       if (pct >= 100) {
         clearInterval(tickId);
-        setTimeout(ready, 200);  // 100% 显示 200ms 后关闭
+        ready();                  // 进度到 100% 立即关闭（移除原 200ms 等待）
       }
     }, 100);
 
