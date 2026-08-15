@@ -287,76 +287,80 @@
 
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
+
+    // v5.24 — 修复横竖屏切换后动画失效
+    // 仅刷新 canvas bitmap 不够：CSS sticky 的 section 高度（calc(100dvh + 300dvh)）
+    // 依赖 100dvh，方向切换时 100dvh 变化导致 ScrollTrigger.end 算出错值，
+    // progress 卡死 / 动画不工作。需要在 resize/orientationchange 时同时：
+    //   1. ScrollTrigger.refresh() — 重算所有 trigger 的 start/end 距离
+    //   2. Lenis.resize()           — 重算 Lenis 内部尺寸缓存（如果有）
+    //   3. resizeCanvas()           — 重设 canvas bitmap（已有）
+    function onViewportChange(){
+      if (window.ScrollTrigger && typeof ScrollTrigger.refresh === 'function') {
+        ScrollTrigger.refresh();
+      }
+      if (window.LENIS_INSTANCE && typeof window.LENIS_INSTANCE.resize === 'function') {
+        window.LENIS_INSTANCE.resize();
+      }
+    }
+    // orientationchange 在 iOS 上触发时机比 resize 早，监听两者确保不漏
+    window.addEventListener('orientationchange', () => {
+      // iOS 上 orientationchange 后 innerHeight 还会再变一次，延后调一次
+      setTimeout(onViewportChange, 100);
+      setTimeout(onViewportChange, 400);  // 兜底：URL bar 完全收起后再刷一次
+    });
+    window.addEventListener('resize', onViewportChange);
+
     preloadAll();
 
-    // 触屏设备跳过 ScrollTrigger.pin — iOS/Android 上 pin + 触摸滚动兼容性差，
-    // 直接走下方 native scrub 兜底（已存在）。桌面端不受影响。
+    // v5.27 — 修复反向滚动不倒放：改用原生 scroll 事件监听
+    // 用户反馈：滑过动画区段后再向上滑回，动画不会像电脑端一样倒放。
+    // ScrollTrigger 的 onUpdate 默认在反向滚动时不会触发（只在 forward 方向调一次），
+    // 导致 progress 卡住，drawFrame 不更新。
+    // 解决：去掉 ScrollTrigger 跟踪 progress 的职责，改用 window.addEventListener
+    // ('scroll') 监听——浏览器原生 scroll 事件 100% 双向触发，
+    // 每次 scroll（无论方向）都现算 progress + drawFrame，
+    // 与电脑端 GSAP scrub 行为一致。
     const isMobile = window.matchMedia('(hover: none), (pointer: coarse)').matches ||
                      (navigator.maxTouchPoints > 0);
 
-    // ====== 主方案：ScrollTrigger pin + scrub (仅桌面) ======
-    if (cap.scrollStoryOK && !isMobile) {
-      gsap.context(() => {
-        ScrollTrigger.create({
-          trigger: '#scroll-story',
-          start: 'top top',
-          // pin 段 = section 高度 × 3（让用户有足够时间看完所有 249 帧，
-          // 滚动距离自适应 viewport — 桌面 1440px ≈ 1620px 滚动，移动 390px ≈ 440px 滚动）
-          end: () => `+=${scrollStory.offsetHeight * 3}`,
-          pin: true,
-          scrub: 0.5,
-          invalidateOnRefresh: true,   // section 高度变化时重计算
-          onUpdate: (self) => {
-            const max = actualFrameCount;
-            const frame = Math.floor(self.progress * (max - 1));
-            if (frame !== currentFrame) {
-              currentFrame = frame;
-              drawFrame(frame);
-            }
-            // 进度广播给所有订阅者（序幕 + 3 组卡片）
-            if (window.SCROLL_STORY_PROGRESS) {
-              window.SCROLL_STORY_PROGRESS.set(self.progress);
-            }
-            // 兼容：旧调用方仍可走 INTRO_OVERLAY.update
-            if (window.INTRO_OVERLAY) {
-              window.INTRO_OVERLAY.update(self.progress);
-            }
-          },
-        });
-      });
-    }
-
-    // ====== 兜底方案：原生 window scroll 监听（不依赖 Lenis/GSAP）======
-    // 任何时候 window.scroll 变化都根据 section 位置绘制对应帧
-    // 这样即使 GSAP / Lenis 完全失效，滚轮仍能控制动画
-    //
-    // 注意：Lenis 1.x 在每次内部 lerp 后都会触发原生 scroll 事件（一次 wheel 可能触发
-    // 几十次）。如果与 ScrollTrigger.onUpdate 并存，两边都会改写 currentFrame / drawFrame，
-    // canvas 会在 ScrollTrigger 的"正确帧"和 nativeScrub 的"近似帧"之间抖动（卡顿）。
-    //
-    // 因此：仅在 ScrollTrigger 不可用时才挂载 nativeScrub，避免冲突。
-    const scrollTriggers = (window.ScrollTrigger && ScrollTrigger.getAll) ? ScrollTrigger.getAll() : [];
-    const scrollTriggerAlive = scrollTriggers.length > 0;
-    if (!scrollTriggerAlive) {
-      function nativeScrub(){
-        const rect = scrollStory.getBoundingClientRect();
-        const sectionTop = rect.top + window.scrollY;
-        const sectionHeight = scrollStory.offsetHeight;
-        const vh = window.innerHeight;
-        // 进度：从 section 顶部到达 viewport 顶部开始，到 section 底部离开 viewport 底部结束
-        const progress = Math.max(0, Math.min(1,
-          (window.scrollY + vh - sectionTop) / (sectionHeight + vh - 100)
-        ));
-        const max = actualFrameCount;
-        const frame = Math.floor(progress * (max - 1));
-        if (frame !== currentFrame) {
-          currentFrame = frame;
-          drawFrame(frame);
-        }
+    // ====== 主方案：原生 window scroll 监听 ======
+    // v5.27 — 不再依赖 ScrollTrigger 跟踪 progress，原因是：
+    //   1. ScrollTrigger.onUpdate 在反向滚动时不触发
+    //   2. CSS sticky 已处理视觉锁屏，ScrollTrigger 不再需要管 pin
+    //   3. 直接用 scroll 事件 100% 双向触发，行为与电脑端 GSAP scrub 一致
+    function tickScrollStory(){
+      const rect = scrollStory.getBoundingClientRect();
+      const sectionTop = rect.top + window.scrollY;
+      const sectionHeight = scrollStory.offsetHeight;
+      const vh = window.innerHeight;
+      // 滚动距离 = section.outerHeight - viewportHeight（与 CSS sticky 区间一致）
+      const SCROLL_RANGE = sectionHeight - vh;
+      const progress = Math.max(0, Math.min(1,
+        (window.scrollY - sectionTop) / SCROLL_RANGE
+      ));
+      const max = actualFrameCount;
+      const frame = Math.floor(progress * (max - 1));
+      if (frame !== currentFrame) {
+        currentFrame = frame;
+        drawFrame(frame);
       }
-      window.addEventListener('scroll', rafThrottle(nativeScrub), { passive: true });
-      // 立即跑一次（页面初始位置）
-      setTimeout(nativeScrub, 100);
+      if (window.SCROLL_STORY_PROGRESS) {
+        window.SCROLL_STORY_PROGRESS.set(progress);
+      }
+      if (window.INTRO_OVERLAY) {
+        window.INTRO_OVERLAY.update(progress);
+      }
+    }
+    // 滚动事件双向触发，rafThrottle 节流（避免高频 scroll 导致 drawFrame 过载）
+    window.addEventListener('scroll', rafThrottle(tickScrollStory), { passive: true });
+    // 立即跑一次（页面初始位置）
+    setTimeout(tickScrollStory, 100);
+
+    // 保留 ScrollTrigger 仅用于 onRefresh（orientationchange/resize 时重算几何），
+    // 不用于 progress 跟踪。
+    if (cap.scrollStoryOK) {
+      ScrollTrigger.refresh();
     }
 
     log('[ScrollStory] booted (ScrollTrigger + native scroll fallback)' + (isMobile ? ' [mobile path]' : ''));
@@ -402,18 +406,110 @@
 
     // 各自独立实例：自己的数据、自己的方向/速度、自己的 hover 监听
     // 速度用 px/s 表示（之前 CSS 是 60s/80s 滚动 50% ≈ 50-60px/s）
-    window.createMarqueeRow({
+    const row1Instance = window.createMarqueeRow({
       arts: row1Arts,
       container: row1,
       direction: 'left',
       speed: row1Speed,
     });
-    window.createMarqueeRow({
+    const row2Instance = window.createMarqueeRow({
       arts: row2Arts,
       container: row2,
       direction: 'right',
       speed: row2Speed,
     });
+
+    // v5.34 — 4 个按钮：每行独立暂停 + 加速
+    // 简化逻辑：按钮状态从 marquee-row 实例读取（inst.isPaused），避免本地副本与实例不同步
+    // 加速改为 3 倍速
+    const SPEED_MULT = 3;
+    const rowState = {
+      row1: { isFast: false, baseSpeed: row1Speed, inst: row1Instance },
+      row2: { isFast: false, baseSpeed: row2Speed, inst: row2Instance },
+    };
+
+    // v5.38 — 事件委托 + mousedown 监听，避免 click 事件丢失
+    // 之前直接绑在按钮的 click 上，电脑端某些场景（mousedown/mouseup 跨元素、
+    // 或者合成 click 被吞）会失效。改为：在 marquee section 上监听 mousedown，
+    // 用 closest() 找到按钮，统一处理。
+    // v5.45 — 推翻重写：按钮 click 直接操作 marquee__track DOM，完全绕开 marquee-row 状态机
+    // 之前：按钮 → inst.pause()/resume() → 改 userPaused → syncPlayState → 改 DOM
+    //   问题：hover mouseenter 也调 syncPlayState → 改 paused=true → 与 userPaused OR
+    //         让按钮效果被 hover 永久屏蔽
+    // 现在：按钮 → 直接改 marquee__track.style.animationPlayState
+    //   hover 只改 marquee-row 内部 paused（不再改 DOM）
+    //   两者完全独立，100% 可靠
+    const marqueeSection = document.getElementById('marquee');
+    if (marqueeSection) {
+      const SPEED_MULT = 3;
+      const rowContainers = {
+        row1: document.getElementById('marqueeRow1'),
+        row2: document.getElementById('marqueeRow2'),
+      };
+
+      const btns = marqueeSection.querySelectorAll('.marquee__btn');
+      btns.forEach(btn => {
+        const rowKey = btn.getAttribute('data-row');
+        const action = btn.getAttribute('data-action');
+        const container = rowContainers[rowKey];
+        if (!container) return;
+
+        // 初始化 aria-pressed
+        const isPaused = container.style.animationPlayState === 'paused';
+        btn.setAttribute('aria-pressed', isPaused ? 'true' : 'false');
+
+        // 电脑端 click + 手机端 touchend 都用同样的逻辑
+        function onActivate(e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          if (action === 'pause') {
+            // 直接 toggle container 的 animationPlayState
+            const currentlyPaused = container.style.animationPlayState === 'paused';
+            const newState = currentlyPaused ? 'running' : 'paused';
+            container.style.animationPlayState = newState;
+            // v5.46 — 同步 marquee-row 实例的 userPaused，让 reduced-motion 路径（rAF 接管）
+            //         也能正确暂停/恢复。CSS animation 路径走 DOM animationPlayState；
+            //         rAF 路径走 instance.userPaused（marquee-row.js tick() 读这个）。
+            // 否则：开启"减少动效"的电脑浏览器上，行继续以原速度滚动，按钮看似"无效"。
+            const inst = rowState[rowKey] && rowState[rowKey].inst;
+            if (inst) {
+              if (newState === 'paused') inst.pause(); else inst.resume();
+            }
+            btn.classList.toggle('is-paused', !currentlyPaused);
+            btn.setAttribute('aria-pressed', !currentlyPaused ? 'true' : 'false');
+            btn.setAttribute('aria-label',
+              (rowKey === 'row1' ? '第1行' : '第2行') +
+              (newState === 'paused' ? '：已暂停，点击继续' : '：播放中，点击暂停'));
+          } else if (action === 'speed') {
+            // 直接 toggle animationDuration（÷3 加速 / ×3 还原）
+            // CSS animation 速度与 duration 成反比：duration 越短速度越快。
+            // 因此"加速"= duration ÷ SPEED_MULT（变短），"还原"= duration × SPEED_MULT（变长）。
+            // 之前 v5.34 写成 ×3/÷3（duration 变长 = 速度变慢），效果与按钮语义相反，
+            // 用户在电脑端测试时点击"加速"按钮感觉"无效"（行明显变慢了）。
+            const isFast = !btn.classList.contains('is-fast');
+            const currentDur = parseFloat(container.style.animationDuration) || 30;
+            const baseDur = isFast ? currentDur / SPEED_MULT : currentDur * SPEED_MULT;
+            container.style.animationDuration = `${baseDur.toFixed(1)}s`;
+            // v5.46 — 同步 marquee-row 实例的速度，让 reduced-motion 路径（rAF）也响应调速
+            //         setSpeed 内已处理：rAF 路径下每帧读 speed，CSS 路径下重设 animationDuration
+            const inst = rowState[rowKey] && rowState[rowKey].inst;
+            if (inst) {
+              const baseSpeed = rowState[rowKey].baseSpeed;
+              inst.setSpeed(isFast ? baseSpeed * SPEED_MULT : baseSpeed);
+            }
+            btn.classList.toggle('is-fast', isFast);
+            btn.setAttribute('aria-pressed', isFast ? 'true' : 'false');
+            btn.setAttribute('aria-label',
+              (rowKey === 'row1' ? '第1行' : '第2行') +
+              (isFast ? '：已加速（3x），点击恢复正常' : '：正常速度，点击加速（3x）'));
+          }
+        }
+
+        btn.addEventListener('click', onActivate);
+        btn.addEventListener('touchend', onActivate);
+      });
+    }
 
     log(`[Marquee] booted (row1=${row1Arts.length} + row2=${row2Arts.length} portrait tiles, independent components)`);
   }
@@ -668,6 +764,14 @@
       // 满足"网页准备好后立刻进入"的预期。
       loaderEl.classList.add('is-removed');
       document.body.classList.add('is-ready');
+      // Issue#4 电脑端修复：所有 defer 脚本（cards / intro / 数据填入）均已完成，
+      // 此刻调一次 ScrollTrigger.refresh()，让 ScrollTrigger 重新计算 end 距离，
+      // 确保 ScrollStory 几何正确。否则 end 在 #scroll-story 还空容器时算错，
+      // cards/intro 填入后几何依旧错位。手机端 nativeScrub 不需要 refresh，
+      // 因为它每次 scroll 都现算（self-correcting）。
+      if (window.ScrollTrigger && typeof window.ScrollTrigger.refresh === 'function') {
+        window.ScrollTrigger.refresh();
+      }
       log('[Loader] hidden');
     }
 
@@ -760,6 +864,24 @@
     bootInkReveal();
     bootCurtain();
     // bootLoader 单独启动（不等 CDN）
+
+    // Issue#1 修复：进入页面就开始后台预热全部 19 张作品大图，
+    // 避免点击 lightbox 时才 fetch 出现空白闪烁。
+    // 实现：用 new Image() 把每张图加进浏览器请求队列，命中 HTTP 缓存后
+    // lightbox.open() 调 img.src = src 时几乎零延迟。
+    // HTTP/1.1 浏览器同域并发连接数限制（通常 6）会自动排队，不会阻塞其他资源。
+    if (window.ARTWORKS_DATA && Array.isArray(window.ARTWORKS_DATA)) {
+      let preheated = 0;
+      window.ARTWORKS_DATA.forEach(art => {
+        if (art && art.image) {
+          const im = new Image();
+          im.decoding = 'async';
+          im.src = art.image;
+          preheated++;
+        }
+      });
+      log('[ink-effects] preheated ' + preheated + ' artwork images');
+    }
   }
 
   function bootWhenReady(){
