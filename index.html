@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260814d">
+  <link rel="stylesheet" href="styles.css?v=20260815k">
 </head>
 <body>
 
@@ -101,28 +101,79 @@
     </div>
   </section>
 
-  <!-- ScrollStory 锁定叙事（GSAP ScrollTrigger.pin + scrub） -->
+  <!-- ScrollStory 锁定叙事（CSS position: sticky + scroll 驱动） -->
   <section class="scroll-story" id="scroll-story" aria-label="黄桂明绘画过程">
-    <!-- Light Rays 远山青光线背景（letterbox 装裱空间，z-index 0，painting 覆盖后只露出 letterbox） -->
-    <canvas id="lightRaysBg" class="light-rays-bg" aria-hidden="true"></canvas>
-    <canvas id="scrollStoryCanvas" class="scroll-story__canvas"></canvas>
+    <!-- v5.23 — 用纯 CSS position: sticky 替代 GSAP pin
+         sticky 子层在 300vh 滚动区间内固定在 viewport 顶部，progress 由
+         window.scrollY 推算。完全绕开 iOS Safari 上 GSAP pin 的 position:fixed bug。 -->
+    <div class="scroll-story__sticky">
+      <!-- Light Rays 远山青光线背景（letterbox 装裱空间，z-index 0，painting 覆盖后只露出 letterbox） -->
+      <canvas id="lightRaysBg" class="light-rays-bg" aria-hidden="true"></canvas>
+      <canvas id="scrollStoryCanvas" class="scroll-story__canvas"></canvas>
 
-    <!-- ScrollStory 序幕（艺术家介绍） — 双列竖排（姓名 + 题画诗），让出 72px 顶导 -->
-    <div id="introOverlay" class="intro-overlay" aria-hidden="true">
-      <article class="ssc__card ssc__card--prologue" role="listitem" data-ssc-card="0" aria-hidden="true">
-        <span class="ssc__rule" aria-hidden="true"></span>
-        <h2 class="intro-overlay__name" data-intro="name" aria-hidden="true"></h2>
-        <span class="intro-overlay__rule-vertical" aria-hidden="true"></span>
-        <p class="intro-overlay__line" data-intro="line" aria-hidden="true"></p>
-      </article>
+      <!-- ScrollStory 序幕（艺术家介绍） — 双列竖排（姓名 + 题画诗），让出 72px 顶导 -->
+      <div id="introOverlay" class="intro-overlay" aria-hidden="true">
+        <article class="ssc__card ssc__card--prologue" role="listitem" data-ssc-card="0" aria-hidden="true">
+          <span class="ssc__rule" aria-hidden="true"></span>
+          <h2 class="intro-overlay__name" data-intro="name" aria-hidden="true"></h2>
+          <span class="intro-overlay__rule-vertical" aria-hidden="true"></span>
+          <p class="intro-overlay__line" data-intro="line" aria-hidden="true"></p>
+        </article>
+      </div>
+
+      <!-- ScrollStory 3 组横向卡片（数据 → 品格 → 收尾） -->
+      <div id="scrollStoryCards" class="ssc" aria-hidden="true"></div>
     </div>
-
-    <!-- ScrollStory 3 组横向卡片（数据 → 品格 → 收尾） -->
-    <div id="scrollStoryCards" class="ssc" aria-hidden="true"></div>
   </section>
 
   <!-- Marquee 双行反向滚动（仅竖向 13 张作品；横向作品在下方单独展示） -->
   <section class="marquee" id="marquee" aria-label="作品长卷">
+    <!-- v5.33 — 4 个按钮：每行独立暂停 + 加速
+         Row1 控件组：左上（left:16px, top:25%），垂直排列
+         Row2 控件组：右下（right:16px, top:75%），垂直排列
+         每个按钮带 data-row + data-action 属性，JS 按属性分发 -->
+    <div class="marquee__ctrl-group marquee__ctrl-group--row1">
+      <button type="button" class="marquee__btn marquee__btn--pause" data-row="row1" data-action="pause"
+              aria-label="第1行：播放中，点击暂停" aria-pressed="false">
+        <svg class="marquee__icon marquee__icon--pause" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="6"  y="5" width="4" height="14" rx="1"/>
+          <rect x="14" y="5" width="4" height="14" rx="1"/>
+        </svg>
+        <svg class="marquee__icon marquee__icon--play" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 5 L19 12 L7 19 Z"/>
+        </svg>
+      </button>
+      <button type="button" class="marquee__btn marquee__btn--speed" data-row="row1" data-action="speed"
+              aria-label="第1行：正常速度，点击加速" aria-pressed="false">
+        <svg class="marquee__icon marquee__icon--normal" viewBox="0 0 24 24" aria-hidden="true">
+          <text x="12" y="17" text-anchor="middle" font-size="14" font-weight="700">×1</text>
+        </svg>
+        <svg class="marquee__icon marquee__icon--fast" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M13 5 L21 12 L13 19 Z M3 5 L11 12 L3 19 Z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="marquee__ctrl-group marquee__ctrl-group--row2">
+      <button type="button" class="marquee__btn marquee__btn--pause" data-row="row2" data-action="pause"
+              aria-label="第2行：播放中，点击暂停" aria-pressed="false">
+        <svg class="marquee__icon marquee__icon--pause" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="6"  y="5" width="4" height="14" rx="1"/>
+          <rect x="14" y="5" width="4" height="14" rx="1"/>
+        </svg>
+        <svg class="marquee__icon marquee__icon--play" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 5 L19 12 L7 19 Z"/>
+        </svg>
+      </button>
+      <button type="button" class="marquee__btn marquee__btn--speed" data-row="row2" data-action="speed"
+              aria-label="第2行：正常速度，点击加速" aria-pressed="false">
+        <svg class="marquee__icon marquee__icon--normal" viewBox="0 0 24 24" aria-hidden="true">
+          <text x="12" y="17" text-anchor="middle" font-size="14" font-weight="700">×1</text>
+        </svg>
+        <svg class="marquee__icon marquee__icon--fast" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M13 5 L21 12 L13 19 Z M3 5 L11 12 L3 19 Z"/>
+        </svg>
+      </button>
+    </div>
     <div class="marquee__track" id="marqueeRow1"></div>
     <div class="marquee__track" id="marqueeRow2"></div>
   </section>
@@ -191,12 +242,12 @@
   <script src="lib/escape-html.js?v=20260730" defer></script>
   <script src="lib/svg-defs.js?v=20260729" defer></script>
   <script src="lib/artworks-data.js?v=20260729" defer></script>
-  <script src="lib/smooth-scroll.js?v=20260729" defer></script>
+  <script src="lib/smooth-scroll.js?v=20260815" defer></script>
   <script src="lib/nav.js?v=20260814a" defer></script>
   <script src="lib/portrait-hint.js?v=20260814c" defer></script>
   <script src="lib/footer.js?v=20260731f" defer></script>
   <script src="lib/image-fit.js?v=20260801a" defer></script>
-  <script src="lib/lightbox.js?v=20260803" defer></script>
+  <script src="lib/lightbox.js?v=20260815d" defer></script>
   <script>
     window.addEventListener('DOMContentLoaded', function(){
       NAV_BOOT({ homepage: true });
@@ -216,12 +267,12 @@
       });
     });
   </script>
-  <script src="lib/scroll-story-progress.js?v=20260730b" defer></script>
+  <script src="lib/scroll-story-progress.js?v=20260815" defer></script>
   <script src="lib/scroll-story-cards-data.js?v=20260730b" defer></script>
   <script src="lib/light-rays-background.js?v=20260803b" defer></script>
   <script src="lib/scroll-story-cards.js?v=20260730b" defer></script>
   <script src="lib/intro-overlay.js?v=20260730b" defer></script>
-<script src="lib/marquee-row.js?v=20260814f" defer></script>
-  <script src="ink-effects.js?v=20260814a" defer></script>
+<script src="lib/marquee-row.js?v=20260815j" defer></script>
+  <script src="ink-effects.js?v=20260815u" defer></script>
 </body>
 </html>

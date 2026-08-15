@@ -1365,6 +1365,149 @@ section[id], div[id] {
   color: var(--color-ink);
 }
 
+/* v5.48 — 联系方式区（替代购买渠道）
+   作品集站不展示标价，所有作品默认为非卖品；如有意收藏，请致电联系。
+   设计要点：
+     - 与 specs 列表视觉延续（同样 border 风格、margin-bottom）
+     - 电话按钮用 --color-seal 印章红做强 CTA
+     - tel: 链接在手机端可一键拨打
+     - 文案强调"孤品 / 不在线售卖"暗示稀缺性，引导线下咨询 */
+.artwork__contact {
+  margin-top: var(--space-md);
+  padding: var(--space-2xl) var(--space-xl);
+  background: var(--color-paper-warm);
+  border: 1px solid var(--color-divider);
+  border-radius: 4px;
+  position: relative;
+  /* 印章红装饰条：左侧 4px 竖线，呼应中国传统印章 */
+  box-shadow: inset 4px 0 0 var(--color-seal);
+}
+.artwork__contact-title {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  margin: var(--space-md) 0 var(--space-lg);
+  letter-spacing: 0.05em;
+}
+.artwork__contact-text {
+  font-size: 0.9375rem;
+  line-height: 1.8;
+  color: var(--color-ink-soft);
+  margin-bottom: var(--space-xl);
+}
+.artwork__contact-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 28px;
+  background: var(--color-seal);
+  color: #FFFFFF;
+  text-decoration: none;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  border-radius: 4px;
+  transition: background 200ms ease, transform 200ms ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.artwork__contact-phone:hover {
+  background: #8b2920;        /* 深一档印章红 */
+  transform: translateY(-1px);
+}
+.artwork__contact-phone:active {
+  transform: translateY(0);
+}
+.artwork__contact-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.artwork__contact-hint {
+  margin-top: var(--space-md);
+  font-size: 0.8125rem;
+  color: var(--color-ink-mute);
+  letter-spacing: 0.05em;
+}
+
+/* v5.49 — 微信同号行
+   微信号与手机号相同；微信没有标准 URL 协议（不像 tel:），
+   所以提供"复制"按钮：navigator.clipboard 复制号码到剪贴板。 */
+.artwork__contact-wechat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: var(--space-md);
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--color-divider);
+  border-radius: 4px;
+  flex-wrap: wrap;
+  /* 微信绿（与品牌印章红形成对比，但仍低调） */
+  color: #07c160;
+}
+.artwork__contact-icon--wechat {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: #07c160;
+}
+.artwork__contact-wechat-label {
+  font-size: 0.875rem;
+  color: var(--color-ink-mute);
+  letter-spacing: 0.05em;
+}
+.artwork__contact-wechat-id {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  color: var(--color-ink);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  /* 长按选中复制（兜底，clipboard API 不可用时） */
+  user-select: all;
+  -webkit-user-select: all;
+}
+.artwork__contact-copy {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--color-seal);
+  color: var(--color-seal);
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-family: var(--font-serif);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.08em;
+  transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+.artwork__contact-copy:hover {
+  background: var(--color-seal);
+  color: #FFFFFF;
+}
+.artwork__contact-copy.is-copied {
+  background: #5DBB63;          /* 绿色：复制成功反馈 */
+  color: #FFFFFF;
+  border-color: #5DBB63;
+}
+.artwork__contact-copy .artwork__contact-icon {
+  width: 14px;
+  height: 14px;
+  color: inherit;
+}
+
+@media (max-width: 1024px) {
+  /* 移动端：联系方式按钮全宽，更好点击 */
+  .artwork__contact-phone {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .artwork__price-row {
   display: flex;
   align-items: baseline;
@@ -1497,6 +1640,95 @@ section[id], div[id] {
   padding: var(--space-2xl) 0;     /* 上下 padding 缩小：3xl→2xl 释放高度 */
   overflow: hidden;
   gap: var(--space-lg);            /* 行间距由 gap 统一管理 */
+}
+
+/* v5.33 — 4 个按钮：每行独立控制（暂停 + 加速）
+   关键设计决策：
+   - 每行单独一个 .marquee__ctrl-group，垂直对齐该行中心
+     row1 group: top:25%（上半 section 中心）
+     row2 group: top:75%（下半 section 中心）
+   - z-index:10 + pointer-events:auto 确保不被 marquee__track 遮挡
+   - 绝对定位 + 半透明背景，确保不被 .marquee overflow:hidden 裁掉 */
+.marquee__ctrl-group {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+.marquee__ctrl-group--row1 { left: 16px; top: 25%; }
+.marquee__ctrl-group--row2 { right: 16px; top: 75%; }
+
+.marquee__btn {
+  position: relative;     /* 脱离文档流，便于 absolute 居中 icon */
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(245, 241, 232, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.10);
+  color: rgba(15, 15, 15, 0.75);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 200ms ease, transform 200ms ease, color 200ms ease;
+  /* icon 切换通过 CSS 变量 */
+  --icon-active: 1;
+  --icon-hidden: 0;
+  /* 显式 pointer-events 防止被 marquee 容器透传 */
+  pointer-events: auto;
+}
+.marquee__btn:hover {
+  background: rgba(245, 241, 232, 0.95);
+  color: rgba(15, 15, 15, 0.95);
+  transform: scale(1.08);
+}
+.marquee__btn:focus-visible {
+  outline: 2px solid var(--color-seal, #c0392b);
+  outline-offset: 3px;
+}
+.marquee__btn:active {
+  transform: scale(0.95);
+}
+
+/* icon 通用样式 */
+.marquee__icon {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: opacity 200ms ease;
+  pointer-events: none;  /* 点击穿透到按钮 */
+}
+.marquee__icon text { fill: currentColor; font-family: var(--font-serif); font-size: 14px; font-weight: 700; }
+
+/* 暂停按钮：默认显示 pause 图标，暂停时切到 play */
+.marquee__btn--pause .marquee__icon--pause { opacity: var(--icon-active); }
+.marquee__btn--pause .marquee__icon--play  { opacity: var(--icon-hidden); }
+.marquee__btn--pause.is-paused {
+  --icon-active: 0;
+  --icon-hidden: 1;
+}
+
+/* 加速按钮：默认显示 ×1（normal），加速时切到 ⏩（fast） */
+.marquee__btn--speed .marquee__icon--normal { opacity: var(--icon-active); }
+.marquee__btn--speed .marquee__icon--fast   { opacity: var(--icon-hidden); }
+.marquee__btn--speed.is-fast {
+  --icon-active: 0;
+  --icon-hidden: 1;
+}
+
+/* 移动端：按钮稍小（避免遮挡内容） */
+@media (max-width: 768px) {
+  .marquee__btn { width: 40px; height: 40px; }
+  .marquee__icon { width: 20px; height: 20px; }
 }
 
 /* ===== Marquee Landscape（横向作品单独展示）=====
@@ -1686,6 +1918,9 @@ button.marquee__tile:focus-visible {
   border-radius: 50%;
   transition: background 200ms ease, transform 200ms ease;
   font-family: var(--font-serif);
+  z-index: 1;            /* Issue#3 修复：图片 transform 创建了独立 stacking context，
+                           按 DOM 顺序绘制会覆盖按钮。提升 z-index 让按钮始终在上层。
+                           桌面 + 移动端统一修复，不影响电脑端视觉。 */
 }
 .lightbox__close:hover,
 .lightbox__close:focus-visible {
@@ -1973,21 +2208,45 @@ body.is-ready .nav {
 .scroll-story {
   position: relative;
   width: 100%;
-  /* 保持 100vh 让 ScrollTrigger pin 工作；padding-top 让出固定导航栏高度 */
-  height: 100vh;
-  padding: var(--nav-height) 0 0 0;
+  /* v5.24 — 用 100dvh 替代 100vh。100vh 在 iOS Safari 是包含 URL bar 的"大视口"，
+     即使 URL bar 收起 100vh 也不变，导致 sticky 计算错位。
+     100dvh = dynamic viewport height，会随 URL bar 折叠实时变化。 */
+  height: calc(100dvh + 300dvh);
+  padding: 0;
   box-sizing: border-box;
   /* v5.18 — canvas 严格 16:9 后上下无 letterbox，左右 letterbox ≈ 110px 给文字 */
   background: #000000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  /* v5.23 — 移除 overflow:hidden（必须！否则子层 position:sticky 失效，
+     sticky 在 overflow:hidden 容器内只能在该容器内"卡住"，不跟随页面）。
+     移除 display:flex/center（移到 .scroll-story__sticky）。 */
+  display: block;
+
+  /* v5.22.2 — 显式 z-index:2 确保 ScrollStory 在所有下方元素之上 */
+  z-index: 2;
 
   /* 默认隐藏（无 transform 缩放 — 边框严格对齐） */
   opacity: 0;
   transition: opacity 800ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity;
+}
+
+/* v5.23 — 纯 CSS sticky 钉位层
+   - top: var(--nav-height) = 顶部让出导航栏高度
+   - height: calc(100dvh - var(--nav-height)) = 从 nav 下方到视口底部正好填满可视区
+     （之前是 100dvh，sticky 子层底部超出视口底部 nav-height，canvas 居中后
+     上方留白 ≈124px / 下方留白 ≈54px，差 70px（≈nav 高度），用户感知"画布偏上"）
+   - display:flex/center = 居中显示 canvas + overlays
+   - 在外层 section（400vh））滚动时，sticky 子层钉在 viewport 顶部，
+     整段 300vh 滚动距离被用于驱动动画进度。 */
+.scroll-story__sticky {
+  position: sticky;
+  top: var(--nav-height);
+  height: calc(100dvh - var(--nav-height));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* z-index: inherit — 继承 section 的 z-index:2，无需另设 */
 }
 
 /* ---------- Light Rays 远山青光线背景（v5.9 移除） ----------
@@ -2017,16 +2276,54 @@ body.is-ready .nav {
 }
 
 .scroll-story__canvas {
-  /* v5.20 — 缩小画布留出真正 letterbox：宽度从 92vw 收到 80vw，左右各留 10vw (≈144px) 给文字 */
+  /* v5.24 — 适配 landscape：原先 width:80vw 在横屏（800×375）下 16:9 计算出
+     的高度（360px）超过 max-height（303px），浏览器只缩高度不缩宽度，
+     导致画布被压扁、bitmap 拉伸。现改用 aspect-ratio + min() 双约束：
+       width = min(80vw, (100dvh - nav) * 16/9)
+       保持 16:9 aspect-ratio
+     横屏下高度先到上限，宽度按 16:9 反算。 */
   display: block;
-  width: 80vw;
-  height: calc(80vw * 9 / 16);
-  max-height: calc(100vh - var(--nav-height));
+  aspect-ratio: 16 / 9;
+  width: min(80vw, calc((100dvh - var(--nav-height)) * 16 / 9));
+  max-height: calc(100dvh - var(--nav-height));
   margin: 0 auto;
   padding: 0;
   border: 0;
   outline: none;
   position: relative;
+}
+
+/* v5.24 — 移动端 landscape 适配：
+   横屏下视口高度小（≈375px），72px 导航栏占 19%，加上 URL bar 实际
+   留给 ScrollStory 动画的可用高度更小，需要：
+     1. 缩小 nav 高度（--nav-height 56px）释放更多画布空间
+     2. 减小 nav 内边距（var(--space-lg) → 12px）让导航本身更紧凑
+     3. 进一步限制 canvas max-height，确保不被 nav 视觉遮挡 */
+@media (max-width: 920px) and (orientation: landscape) {
+  :root {
+    /* v5.47 — nav 实际高度约 66px（padding 12px ×2 + logo 高度 + 1px 边框）。
+       之前设 56px 偏小，sticky 子层底部留白比顶部多 10px。设为 66px 让上下对称。 */
+    --nav-height: 66px;
+  }
+  .nav {
+    padding: 12px 0;
+  }
+  .scroll-story__sticky {
+    top: var(--nav-height);
+  }
+  .scroll-story__canvas {
+    /* 横屏下额外让出 4px 安全距离，避免顶到 nav 下沿 */
+    max-height: calc(100dvh - var(--nav-height) - 4px);
+  }
+}
+
+/* v5.47 — 移动端 portrait：nav 实际高度约 60px，但 --nav-height 默认 72px
+   导致 sticky 子层顶部比 nav 底部高 10-12px，canvas 居中后上下不对称。
+   显式把 --nav-height 设为 60px，让 sticky 子层顶部紧贴 nav 底部。 */
+@media (max-width: 920px) and (orientation: portrait) {
+  :root {
+    --nav-height: 60px;
+  }
 }
 
 .scroll-story__canvas::before,
