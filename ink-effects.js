@@ -387,14 +387,16 @@
       return;
     }
 
-    // 仅取竖向作品（lib/artworks-data.js 提供 getPortraitArtworks）
-    const portraits = (typeof window.getPortraitArtworks === 'function')
-      ? window.getPortraitArtworks()
-      : (window.ARTWORKS_DATA || []).filter(a => a.image);
-    const row1Arts = portraits.filter(a => a.id >= 1  && a.id <= 9);
-    const row2Arts = portraits.filter(a => a.id >= 10 && a.id <= 19);
+    // 仅取竖向作品（lib/artworks-data.js 提供 getPortraitArtworks；admin-v2 可重写为 12 slots）
+    // v2026-10-09 v2.2: admin 后台拆为 marqueeRow1（6 张竖）+ marqueeRow2（6 张横）独立两 Tab
+    const row1Arts = (typeof window.getMarqueeRow1 === 'function')
+      ? window.getMarqueeRow1()
+      : (window.ARTWORKS_DATA || []).filter(a => a.id >= 1 && a.id <= 9);
+    const row2Arts = (typeof window.getMarqueeRow2 === 'function')
+      ? window.getMarqueeRow2()
+      : (window.ARTWORKS_DATA || []).filter(a => a.id >= 10 && a.id <= 19);
     if (!row1Arts.length || !row2Arts.length) {
-      console.warn('[Marquee] 竖向作品数据不全', { row1: row1Arts.length, row2: row2Arts.length });
+      console.warn('[Marquee] 数据不全', { row1: row1Arts.length, row2: row2Arts.length });
       return;
     }
 
@@ -534,44 +536,45 @@
   // 动态设置（数据交叉验证每张都是 1862-1920 宽 × 885-1011 高）。
   // =================================================================
 
-  // 用户定制布局（Image #3 = id=17 诗意"江岸奇峰耸"关联）
-  // 如需调整：改 id 即可，wide=true 表示跨列居中（最上方/最下方）
-  const LANDSCAPE_LAYOUT = [
-    { id: 17, wide: true  },  // Image #3 - 最上方居中
-    { id: 4,  wide: false },  // 左
-    { id: 13, wide: false },  // 右
-    { id: 16, wide: false },  // 左
-    { id: 19, wide: false },  // 右
-    { id: 6,  wide: true  },  // Image #2 - 最下方居中
+  // v2026-10-09 v2.4：landscape layout 改为"按 slots 顺序 + wide 由 grid 自动"（无固定 LANDSCAPE_LAYOUT）
+  // 用户在 admin 后台配置 marqueeLandscape.slots 顺序，第 1/6 张自动 wide，居中铺开
+  const LANDSCAPE_LAYOUT_OLD = [
+    { id: 17, wide: true  },
+    { id: 4,  wide: false },
+    { id: 13, wide: false },
+    { id: 16, wide: false },
+    { id: 19, wide: false },
+    { id: 6,  wide: true  },
   ];
 
   function tileHTML(art, wide){
-    // 首页点击作品改为 lightbox 全屏展示，不跳转。
-    // 缩略图取素材/thumbs/{id}.jpg，lightbox 用素材/{id}.jpg 原图。
-    const thumbSrc = `素材/thumbs/${art.id}.jpg`;
-    const fullSrc = `素材/${art.id}.jpg`;
+    // v2026-10-09 v2.4：art 可能是 {id:数字} 或 {id:null, image:路径字符串}；
+    // 优先用 art.thumb / art.image（兼容上传图片），无则用 id 推导老路径
     const esc = window.HGM_ESCAPE_HTML || ((s) => String(s));
     const wideCls = wide ? ' marquee__tile--wide' : '';
+    const thumbSrc = art.thumb || art.image || (art.id ? `素材/thumbs/${art.id}.jpg` : '');
+    const fullSrc  = art.image || (art.id ? `素材/${art.id}.jpg` : '');
+    const artIdAttr = art.id != null ? esc(art.id) : '';
     return `
-      <button type="button" class="marquee__tile${wideCls}" data-id="${esc(art.id)}"
+      <button type="button" class="marquee__tile${wideCls}" data-id="${artIdAttr}"
               data-wide="${wide ? '1' : '0'}"
               data-thumb="${esc(thumbSrc)}" data-full="${esc(fullSrc)}"
-              data-title="${esc(art.title)}" data-seal="${esc(art.seal)}"
-              data-fit="true" aria-label="放大查看《${esc(art.title)}》">
-        <img src="${esc(thumbSrc)}" alt="${esc(art.title)}" decoding="async" loading="lazy" />
-        <span class="marquee__seal">${esc(art.seal)}</span>
+              data-title="${esc(art.title || '')}" data-seal="${esc(art.seal || '')}"
+              data-fit="true" aria-label="放大查看《${esc(art.title || '')}》">
+        <img src="${esc(thumbSrc)}" alt="${esc(art.title || '')}" decoding="async" loading="lazy" />
+        <span class="marquee__seal">${esc(art.seal || '')}</span>
       </button>
     `;
   }
 
-  /** 按 LANDSCAPE_LAYOUT 顺序 + wide 标记重新组织作品数组 */
+  /** 按 slots 顺序生成 layout：第一张与最后一张 wide（居中跨列），中间 normal */
   function layoutLandscapes(arts){
-    const byId = new Map(arts.map(a => [a.id, a]));
     const out = [];
-    for (const item of LANDSCAPE_LAYOUT) {
-      const art = byId.get(item.id);
-      if (!art) continue;
-      out.push({ art, wide: !!item.wide });
+    const n = arts.length;
+    for (let i = 0; i < n; i++){
+      // 默认 wide：第 0 张和最后一张 wide（仅当 n>=3 时显出视觉对比；n=2 时都 wide；n=1 也 wide）
+      const wide = (n <= 2) ? true : (i === 0 || i === n - 1);
+      out.push({ art: arts[i], wide });
     }
     return out;
   }

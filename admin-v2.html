@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>黄桂明 · 组件管理 v2</title>
+  <link rel="stylesheet" href="styles.css?v=20260814a">
+  <style>
+    body { background: var(--color-paper, #F5F1E8); margin: 0; }
+
+    .admin-v2__shell {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 24px 64px;
+    }
+
+    .admin-v2__header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--color-divider, #E5E0D5);
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .admin-v2__header h1 {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      margin: 0;
+      color: var(--color-ink, #1A1A1A);
+    }
+    .admin-v2__header__hint {
+      font-size: 0.8125rem;
+      color: var(--color-ink-mute, #666);
+      flex: 1;
+    }
+
+    .admin-v2__tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--color-divider, #E5E0D5);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .admin-v2__tab {
+      border: none; background: transparent;
+      padding: 10px 20px;
+      font-family: var(--font-serif);
+      font-size: 0.9375rem;
+      color: var(--color-ink-mute, #666);
+      cursor: pointer;
+      position: relative;
+    }
+    .admin-v2__tab:hover { color: var(--color-ink, #1A1A1A); }
+    .admin-v2__tab.is-active { color: var(--color-ink, #1A1A1A); font-weight: 500; }
+    .admin-v2__tab.is-active::after {
+      content: ''; position: absolute;
+      bottom: -1px; left: 0; right: 0;
+      height: 2px; background: var(--color-seal, #A8332C);
+    }
+
+    .admin-v2__slot-grid { display: grid; gap: 16px; }
+    .admin-v2__slot-grid--3 { grid-template-columns: repeat(3, 1fr); }
+    @media (max-width: 900px){ .admin-v2__slot-grid--3 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px){ .admin-v2__slot-grid--3 { grid-template-columns: 1fr; } }
+
+    .admin-v2__slot {
+      background: white;
+      border: 1px solid var(--color-divider, #E5E0D5);
+      border-radius: 6px;
+      padding: 14px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .admin-v2__slot--add {
+      border-style: dashed;
+      background: transparent;
+      align-items: center; justify-content: center;
+      min-height: 220px;
+      padding: 0;
+    }
+    .admin-v2__add-slot {
+      width: 100%; height: 100%;
+      background: transparent;
+      border: none;
+      color: var(--color-ink-mute, #666);
+      font-family: var(--font-serif);
+      font-size: 0.9375rem;
+      cursor: pointer;
+      padding: 16px;
+    }
+    .admin-v2__add-slot:hover { color: var(--color-seal, #A8332C); background: rgba(168,51,44,0.04); }
+    .admin-v2__add-slot small {
+      display: block;
+      font-family: var(--font-sans);
+      font-size: 0.6875rem;
+      margin-top: 4px;
+      color: var(--color-ink-mute, #666);
+    }
+    .admin-v2__slot__label {
+      font-family: var(--font-serif);
+      font-size: 0.8125rem;
+      color: var(--color-ink, #1A1A1A);
+      font-weight: 500;
+    }
+    .admin-v2__slot__thumb {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: var(--color-paper-warm, #EBE4D2);
+      border: 1px solid var(--color-divider, #E5E0D5);
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .admin-v2__slot__thumb img { width: 100%; height: 100%; object-fit: contain; }
+    .admin-v2__slot__thumb--empty { color: var(--color-ink-mute, #666); font-size: 0.8125rem; }
+    .admin-v2__slot__title {
+      font-family: var(--font-serif);
+      font-size: 0.875rem;
+      color: var(--color-ink, #1A1A1A);
+      margin: 0;
+    }
+    .admin-v2__slot__value {
+      font-family: monospace;
+      font-size: 0.6875rem;
+      color: var(--color-ink-mute, #666);
+      word-break: break-all;
+      line-height: 1.4;
+    }
+    .admin-v2__slot__actions {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .admin-v2__slot__actions .btn {
+      font-size: 0.75rem; padding: 4px 10px;
+      flex: 1; min-width: 0; text-align: center;
+    }
+    .admin-v2__slot__actions .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+    .admin-v2__bottom {
+      position: sticky;
+      bottom: 0;
+      background: var(--color-paper, #F5F1E8);
+      border-top: 1px solid var(--color-divider, #E5E0D5);
+      padding: 14px 0;
+      margin-top: 32px;
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .admin-v2__bottom__note {
+      font-size: 0.75rem;
+      color: var(--color-ink-mute, #666);
+      flex: 1;
+      min-width: 200px;
+    }
+    .admin-v2__save-btn {
+      font-size: 0.9375rem;
+      padding: 10px 24px !important;
+      background: var(--color-seal, #A8332C) !important;
+      border-color: var(--color-seal, #A8332C) !important;
+    }
+
+    .admin-v2__error {
+      padding: 24px;
+      background: #FFE5E0;
+      border: 1px solid #FFC8B8;
+      border-radius: 6px;
+      color: #8B0000;
+      font-size: 0.875rem;
+    }
+
+    /* GitHub 快速配置面板 */
+    .admin-v2__gh-config {
+      display: none;
+      background: white;
+      border: 1px solid var(--color-divider, #E5E0D5);
+      border-radius: 4px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .admin-v2__gh-config h3 {
+      font-family: var(--font-serif);
+      margin: 0 0 12px;
+      font-size: 1rem;
+    }
+    .admin-v2__gh-config__row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .admin-v2__gh-config__row label {
+      font-size: 0.75rem;
+      color: var(--color-ink-mute, #666);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .admin-v2__gh-config__row input {
+      padding: 6px 10px;
+      font-size: 0.8125rem;
+      border: 1px solid var(--color-divider, #E5E0D5);
+      border-radius: 3px;
+      font-family: inherit;
+    }
+    @media (max-width: 600px){ .admin-v2__gh-config__row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="admin-v2__shell">
+    <header class="admin-v2__header">
+      <h1>🖋️ 黄桂明 · 组件管理 v2</h1>
+      <p class="admin-v2__header__hint" id="adminHeaderHint">加载中…</p>
+      <button type="button" class="btn btn--ghost-dark btn--small" id="adminSetGithub">⚙ 配置 GitHub</button>
+    </header>
+
+    <!-- GitHub 快速配置面板 -->
+    <form class="admin-v2__gh-config" id="githubQuickConfig">
+      <h3>🔑 GitHub 配置（保存到 localStorage）</h3>
+      <div class="admin-v2__gh-config__row">
+        <label>仓库（用户名/仓库名）
+          <input type="text" name="repo" placeholder="例如：username/huang-guiming-gallery">
+        </label>
+        <label>分支
+          <input type="text" name="branch" placeholder="main" value="main">
+        </label>
+      </div>
+      <div class="admin-v2__gh-config__row">
+        <label>Personal Access Token（Contents 写权限）
+          <input type="password" name="token" placeholder="已配置则留空（仅首次填）">
+        </label>
+        <label>CORS 代理 URL（CF Worker，可选）
+          <input type="text" name="proxy" placeholder="https://xxx.workers.dev">
+        </label>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button type="submit" class="btn btn--primary btn--small">保存配置</button>
+        <button type="button" class="btn btn--ghost-dark btn--small" id="githubQuickCancel">取消</button>
+      </div>
+    </form>
+
+    <nav class="admin-v2__tabs" id="adminTabs" aria-label="组件切换"></nav>
+    <main id="adminTabBody">加载中…</main>
+
+    <div class="admin-v2__bottom">
+      <span class="admin-v2__bottom__note">
+        💡 每个槽位直接上传 = 立即推 GitHub；顶部[保存] 才会同步 components.json 引用。访客 30-60s 后可见。
+      </span>
+      <button type="button" class="btn btn--primary admin-v2__save-btn" id="adminSaveBtn">💾 保存 components.json</button>
+    </div>
+  </div>
+
+  <script src="lib/escape-html.js" defer></script>
+  <script src="lib/components-loader.js?v=20261009b" defer></script>
+  <script src="lib/github-api.js?v=20261009c" defer></script>
+  <script src="lib/admin-v2.js?v=20261009c" defer></script>
+</body>
+</html>
